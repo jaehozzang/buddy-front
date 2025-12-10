@@ -1,0 +1,20 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+  <rect width="24" height="24" rx="12" fill="#03C75A"/>
+
+  <!-- 더 크고 두꺼운 N -->
+  <path d="
+    M15 6.8
+    V13.4
+    L10.3 6.8
+    H7.4
+    V17.2
+    H10.1
+    V10.6
+    L14.7 17.2
+    H17
+    V6.8
+    H15
+    Z
+  " fill="white"/>
+</svg>

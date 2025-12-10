@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-[calc(100vh-150px)] flex justify-center items-center bg-white">
@@ -14,6 +16,8 @@ function LoginPage() {
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
+            // TODO: 여기서 실제 로그인 검증(API) 한 다음 성공하면 아래로 이동
+            navigate("/app"); // 또는 "/app/home"
           }}
         >
 
@@ -65,18 +69,27 @@ function LoginPage() {
           <div className="h-px flex-1 bg-primary-100" />
         </div>
 
-        {/* OAuth 버튼 */}
-        <div className="mt-4 flex flex-col gap-2 text-sm tracking-[0.08em]">
-          <button className="w-full rounded-md border border-primary-200 bg-white py-2 px-4 text-left hover:bg-primary-50 transition">
-            OAUTH(GOOGLE)
+        {/* OAuth 버튼 (아이콘 버전) */}
+        <div className="mt-6 flex justify-center gap-4">
+
+          {/* Google */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-primary-50 transition shadow-sm">
+            <img src="/oauth/google_circle.svg" alt="google" className="w-8 h-8" />
           </button>
-          <button className="w-full rounded-md border border-primary-200 bg-white py-2 px-4 text-left hover:bg-primary-50 transition">
-            OAUTH(KAKAO)
+
+          {/* Kakao */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-primary-50 transition shadow-sm">
+            <img src="/oauth/kakao.svg" alt="kakao" className="w-8 h-8" />
           </button>
-          <button className="w-full rounded-md border border-primary-200 bg-white py-2 px-4 text-left hover:bg-primary-50 transition">
-            OAUTH(NAVER)
+
+          {/* Naver */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-primary-50 transition shadow-sm">
+            <img src="/oauth/naver.svg" alt="naver" className="w-8 h-8" />
           </button>
+
         </div>
+
+
 
       </div>
     </div>
