@@ -1,67 +1,117 @@
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/useAuthStore"; // 스토어 불러오기
+//import { useState } from "react";
+import { useAuthStore } from "../store/useAuthStore";
+import { useDiaryStore } from "../store/useDiaryStore";
 
 export default function SettingsPage() {
-  const navigate = useNavigate();
+  const { user, updateUser } = useAuthStore(); // logout은 헤더에 있으니 여기서 안 써도 됨
+  const { diaries } = useDiaryStore();
 
-  // 1. 스토어에서 유저 정보와 로그아웃 함수 가져오기
-  const { user, logout } = useAuthStore();
+  // 캐릭터 목록
+  const characters = [
+    { type: "hamster", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png" },
+    { type: "fox", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png" },
+    { type: "lion", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Lion.png" },
+    { type: "panda", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png" },
+    { type: "cat", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat%20Face.png" },
+    { type: "dog", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Dog%20Face.png" },
+    { type: "rabbit", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png" },
+  ];
 
-  const handleLogout = () => {
-    // 2. 로그아웃 실행 (저장된 정보 삭제 & isLoggedIn = false)
-    logout();
+  const handleCharacterChange = (type: string) => {
+    updateUser({ characterType: type });
+    // alert은 너무 올드하니 제거하거나 토스트 메시지로 대체 가능 (지금은 생략)
+  };
 
-    // 3. 로그인 화면으로 이동 (replace: true 하면 뒤로가기 못함)
-    navigate("/auth/login", { replace: true });
+  const handleResetData = () => {
+    if (confirm("⚠️ 정말 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) {
+      localStorage.clear();
+      window.location.href = "/";
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto px-6 py-8 space-y-8">
-      <h2 className="text-2xl font-bold text-slate-800">설정</h2>
+    // 배경을 흰색(bg-white)으로 통일
+    <div className="h-full overflow-y-auto bg-white px-6 py-8 md:px-12">
+      <div className="max-w-2xl mx-auto">
 
-      {/* 내 정보 카드 */}
-      <div className="bg-white p-6 rounded-2xl border border-primary-200 shadow-sm flex items-center gap-4">
-        {/* 프로필 이미지 영역 */}
-        <div className="w-14 h-14 rounded-full bg-primary-100 border border-primary-200 flex items-center justify-center text-2xl">
-          {/* 캐릭터 타입에 따라 이모지나 이미지를 보여줘도 좋아요 */}
-          😊
+        {/* 1. 헤더 */}
+        <div className="mb-10">
+          <h2 className="text-3xl font-extrabold text-slate-800">Settings</h2>
+          <p className="text-slate-500 text-sm mt-2">계정 및 앱 설정</p>
         </div>
-        <div>
-          <p className="text-xs text-slate-400 font-bold mb-1">SIGNED IN AS</p>
-          <p className="text-lg font-bold text-slate-800">{user?.nickname || "알 수 없음"}</p>
+
+        {/* 2. 내 프로필 (박스 없이 깔끔하게) */}
+        <div className="flex items-center gap-5 mb-10 pb-10 border-b border-slate-100">
+          <div className="w-20 h-20 rounded-full bg-slate-50 p-2">
+            <img
+              src={characters.find(c => c.type === user?.characterType)?.img || characters[6].img}
+              alt="profile"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800">{user?.nickname}</h3>
+            <p className="text-sm text-primary-600 font-medium mb-1">My Buddy: {user?.buddyName}</p>
+            <p className="text-xs text-slate-400">ID: {user?.id}</p>
+          </div>
         </div>
-      </div>
 
-      {/* 설정 메뉴들 (나중에 기능 추가 가능) */}
-      <div className="space-y-3">
-        <button className="w-full text-left px-4 py-3 bg-white rounded-xl text-slate-600 text-sm hover:bg-slate-50 transition">
-          🔔 알림 설정
-        </button>
-        <button className="w-full text-left px-4 py-3 bg-white rounded-xl text-slate-600 text-sm hover:bg-slate-50 transition">
-          👤 계정 정보 수정
-        </button>
-      </div>
+        {/* 3. 캐릭터 변경 */}
+        <div className="mb-10 pb-10 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">내 버디 변경</h3>
+          <div className="flex flex-wrap gap-4">
+            {characters.map((char) => (
+              <button
+                key={char.type}
+                onClick={() => handleCharacterChange(char.type)}
+                className={`w-16 h-16 p-2 rounded-2xl transition-all duration-200 ${user?.characterType === char.type
+                    ? "bg-primary-50 ring-2 ring-primary-500 ring-offset-2 scale-110"
+                    : "bg-slate-50 hover:bg-slate-100 grayscale hover:grayscale-0 opacity-70 hover:opacity-100"
+                  }`}
+              >
+                <img src={char.img} alt={char.type} className="w-full h-full object-contain" />
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <hr className="border-slate-100" />
+        {/* 4. 데이터 관리 (리스트 형태) */}
+        <div className="mb-10">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">데이터 관리</h3>
 
-      {/* 로그아웃 버튼 (빨간색으로 강조) */}
-      <button
-        onClick={handleLogout}
-        className="w-full py-4 rounded-xl bg-red-50 text-red-500 font-bold text-sm border border-red-100 hover:bg-red-100 transition shadow-sm"
-      >
-        로그아웃
-      </button>
+          <div className="space-y-6">
+            {/* 항목 1 */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-700">총 기록된 일기</p>
+                <p className="text-xs text-slate-400 mt-0.5">로컬 저장소 데이터</p>
+              </div>
+              <span className="text-base font-bold text-slate-800">{diaries.length}개</span>
+            </div>
 
-      {/* 👇 개발용 데이터 확인 박스 (나중에 지우면 됨) */}
-      <div className="mt-8 p-4 bg-slate-800 rounded-xl overflow-hidden">
-        <p className="text-xs text-slate-400 font-bold mb-2">DEVELOPER MODE (DATA CHECK)</p>
-        <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      </div>
+            {/* 항목 2 */}
+            <div className="flex items-center justify-between pt-4">
+              <div>
+                <p className="text-sm font-medium text-red-500">데이터 초기화</p>
+                <p className="text-xs text-slate-400 mt-0.5">모든 기록이 영구 삭제됩니다.</p>
+              </div>
+              <button
+                onClick={handleResetData}
+                className="text-xs font-bold text-red-500 underline decoration-red-200 hover:decoration-red-500 hover:text-red-600 transition-all underline-offset-4"
+              >
+                삭제하기
+              </button>
+            </div>
+          </div>
+        </div>
 
-      <div className="text-center">
-        <p className="text-xs text-slate-300">Buddy App v1.0.0</p>
+        {/* 5. 저작권 (아주 흐리게) */}
+        <div className="text-center pt-10">
+          <p className="text-[10px] text-slate-300">
+            Designed by You · Fluent Emojis designed by Microsoft (CC BY 4.0)
+          </p>
+        </div>
+
       </div>
     </div>
   );

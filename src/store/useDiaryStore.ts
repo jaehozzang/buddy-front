@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 // 일기 데이터 타입
 export interface Diary {
     id: string;      // 일기 고유 ID (날짜+시간 등)
+    userId: string;
     date: string;    // "2025-05-20" 형식의 날짜 문자열
     mood: string;    // "기쁨", "슬픔" 등 감정
     content: string; // 일기 내용

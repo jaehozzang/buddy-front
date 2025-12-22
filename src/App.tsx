@@ -15,6 +15,7 @@ import RegisterNicknamePage from "./pages/RegisterNicknamePage";
 import CharacterSelectPage from "./pages/CharacterSelectPage";
 
 import HomePage from "./pages/HomePage";
+import ChatPage from "./pages/ChatPage";
 import CalendarPage from "./pages/CalendarPage";
 import DiaryPage from "./pages/DiaryPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -60,6 +61,7 @@ function App() {
           >
             <Route index element={<HomePage />} />
             <Route path="home" element={<HomePage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="diary/new" element={<DiaryPage mode="create" />} />
             <Route path="diary/:id" element={<DiaryPage mode="edit" />} />
