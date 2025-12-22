@@ -7,6 +7,7 @@ interface User {
   id?: string;        // 👈 추가 (아이디)
   password?: string;
   nickname: string;
+  buddyName?: string;
   characterType: string;
 }
 

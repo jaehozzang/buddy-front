@@ -48,7 +48,9 @@ function CharacterSelectPage() {
     register({
       id: userId,
       password: password,
-      nickname: receivedNickname || characterName,
+      nickname: receivedNickname, // 내 닉네임 (재호)
+      // ✨ [추가] 입력한 애칭이 있으면 쓰고, 없으면 종족 이름(예: 토끼) 사용
+      buddyName: characterName || selectedCharacter.name,
       characterType: selectedCharacter.type || "rabbit",
     });
 

@@ -19,6 +19,7 @@ import CalendarPage from "./pages/CalendarPage";
 import DiaryPage from "./pages/DiaryPage";
 import SettingsPage from "./pages/SettingsPage";
 import MainLayout from "./MainLayout";
+import ReportPage from "./pages/ReportPage";
 
 function App() {
   const location = useLocation();
@@ -63,6 +64,7 @@ function App() {
             <Route path="diary/new" element={<DiaryPage mode="create" />} />
             <Route path="diary/:id" element={<DiaryPage mode="edit" />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="report" element={<ReportPage />} />
           </Route>
 
           {/* 나머지 다 인트로로 */}

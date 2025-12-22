@@ -31,6 +31,7 @@ const HomePage = () => {
 
   // 혹시라도 정보가 없으면 기본값으로 "rabbit", "알 수 없음" 사용
   const myNickname = user?.nickname || "알 수 없음";
+  const myBuddyName = user?.buddyName || "Buddy";
   const myCharType = user?.characterType || "rabbit";
 
   // 캐릭터 타입에 따른 이미지 주소 연결 (매핑)
@@ -151,7 +152,7 @@ const HomePage = () => {
           </div>
           <div>
             {/* 내가 설정한 닉네임 표시 */}
-            <h2 className="text-sm font-bold text-slate-800">나의 버디 ({myNickname})</h2>
+            <h2 className="text-sm font-bold text-slate-800">{myBuddyName}</h2>
             <p className="text-xs text-primary-500">대화 중...</p>
           </div>
         </div>

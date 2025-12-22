@@ -1,24 +1,59 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom"; // useParams 추가
 import { useDiaryStore } from "../store/useDiaryStore";
 
-export default function DiaryPage() {
+// ✨ 1. Props 타입 정의 (mode를 받을 수 있게 선언)
+interface DiaryPageProps {
+  mode?: "create" | "edit";
+}
+
+// ✨ 2. 컴포넌트에서 props 받기 ({ mode })
+export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { addDiary } = useDiaryStore();
+  const { id } = useParams(); // URL에 있는 id 가져오기 (예: /diary/123)
+  const { addDiary, diaries } = useDiaryStore();
 
-  // 1. 전달받은 데이터 꺼내기
-  // date: 날짜, originDiary: 수정할 경우 넘어오는 기존 일기 데이터
+  // 3. 넘어온 데이터 확인 (캘린더에서 클릭해서 왔을 때)
   const { date, originDiary } = location.state || {};
 
-  // 날짜가 없으면 오늘 날짜로 방어 코드
-  const targetDate = date || new Date().toISOString().split("T")[0];
+  // 날짜 기본값 설정
+  const initialDate = date || new Date().toISOString().split("T")[0];
 
-  // 2. 상태 초기값 설정 (수정이면 기존 내용, 아니면 빈 값)
-  const [content, setContent] = useState(originDiary ? originDiary.content : "");
-  const [mood, setMood] = useState(originDiary ? originDiary.mood : "행복");
+  // 4. 상태 관리
+  const [targetDate, setTargetDate] = useState(initialDate);
+  const [content, setContent] = useState("");
+  const [mood, setMood] = useState("행복");
 
   const moods = ["행복", "설렘", "평온", "우울", "화남", "피곤"];
+
+  // ✨ 5. [중요] 수정 모드일 때 데이터 채워넣기 (새로고침 대응)
+  useEffect(() => {
+    if (mode === "edit") {
+      // 1순위: 캘린더에서 state로 넘겨준 데이터 사용
+      if (originDiary) {
+        setTargetDate(originDiary.date);
+        setContent(originDiary.content);
+        setMood(originDiary.mood);
+      }
+      // 2순위: 새로고침해서 state가 날아갔으면 URL의 id로 스토어에서 찾기
+      else if (id) {
+        const foundDiary = diaries.find(d => d.id === id);
+        if (foundDiary) {
+          setTargetDate(foundDiary.date);
+          setContent(foundDiary.content);
+          setMood(foundDiary.mood);
+        } else {
+          alert("존재하지 않는 일기입니다.");
+          navigate("/app/calendar");
+        }
+      }
+    } else {
+      // 생성 모드일 때 날짜가 state로 넘어왔으면 적용
+      if (date) setTargetDate(date);
+    }
+  }, [mode, originDiary, id, diaries, date, navigate]);
+
 
   const handleSave = () => {
     if (!content.trim()) {
@@ -26,15 +61,18 @@ export default function DiaryPage() {
       return;
     }
 
-    // 3. 스토어에 저장 (같은 날짜면 덮어쓰기 됨)
+    // ID 결정: 수정이면 기존 ID 유지, 생성이면 새 ID 발급
+    // (URL 파라미터 id가 있으면 그걸 쓰고, 없으면 originDiary의 id, 그것도 없으면 새거)
+    const diaryId = id || originDiary?.id || Date.now().toString();
+
     addDiary({
-      id: Date.now().toString(), // ID는 새로 따거나 유지해도 되지만, 덮어쓰기라 상관없음
+      id: diaryId,
       date: targetDate,
       mood: mood,
       content: content,
     });
 
-    alert("일기가 저장되었습니다! ✍️");
+    alert(mode === "edit" ? "일기가 수정되었습니다! ✏️" : "일기가 등록되었습니다! ✍️");
     navigate("/app/calendar");
   };
 
@@ -45,7 +83,9 @@ export default function DiaryPage() {
         <button onClick={() => navigate(-1)} className="text-xl text-slate-400 hover:text-slate-600">
           ←
         </button>
-        <span className="font-bold text-slate-800">{targetDate} 기록</span>
+        <span className="font-bold text-slate-800">
+          {targetDate} {mode === "edit" ? "수정하기" : "기록하기"}
+        </span>
         <div className="w-6" />
       </div>
 
@@ -91,7 +131,7 @@ export default function DiaryPage() {
           className="w-full bg-primary-600 text-white py-4 rounded-xl font-bold text-lg 
           shadow-lg shadow-primary-300/30 hover:bg-primary-700 transition active:scale-[0.98]"
         >
-          {originDiary ? "수정완료" : "저장하기"}
+          {mode === "edit" ? "수정완료" : "저장하기"}
         </button>
       </div>
     </div>

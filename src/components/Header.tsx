@@ -53,7 +53,7 @@ export default function Header() {
                 {/* 가운데 메뉴 */}
                 <nav className="flex items-center gap-8 text-sm text-slate-700 font-medium">
                     <Link to="/app/home" className="hover:text-primary-600 transition-colors">
-                        Diary
+                        Home
                     </Link>
                     <Link to="/app/calendar" className="hover:text-primary-600 transition-colors">
                         Calendar
