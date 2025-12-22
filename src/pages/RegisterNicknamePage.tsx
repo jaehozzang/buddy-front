@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 
 function RegisterNicknamePage() {
     const [nickname, setNickname] = useState("");
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // 이전 페이지(RegisterPage)에서 보낸 ID, PW 받기
+    const { userId, password } = location.state || {};
 
 
     return (
@@ -18,9 +22,17 @@ function RegisterNicknamePage() {
                     className="flex flex-col gap-4"
                     onSubmit={(e) => {
                         e.preventDefault();
-                        navigate("/auth/register/character"); // 캐릭터 선택 페이지로 이동
-                    }}
+                        if (!nickname.trim()) return; // 빈칸이면 안 넘어감
 
+                        // ✨ [중요] 닉네임을 들고 다음 페이지로 이동!
+                        navigate("/auth/register/character", {
+                            state: {
+                                userId: userId,       // 받아서 그대로 넘김
+                                password: password,   // 받아서 그대로 넘김
+                                userNickname: nickname
+                            }
+                        });
+                    }}
                 >
                     {/* NICKNAME 입력 */}
                     <input
