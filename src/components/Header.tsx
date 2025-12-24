@@ -21,6 +21,24 @@ export default function Header() {
         rabbit: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png",
     };
 
+    // ✨ [추가] 미니 모드(팝업) 열기 함수
+    const openMiniChat = () => {
+        // 1. 창 크기 설정 (카톡 PC버전 정도 크기)
+        const width = 380;
+        const height = 650;
+
+        // 2. 모니터 오른쪽 위치 계산
+        const left = window.screen.width - width - 100;
+        const top = 100;
+
+        // 3. 팝업 열기 (toolbar=no, menubar=no 등으로 깔끔하게)
+        window.open(
+            '/app/chat?mode=mini', 
+            'MiniBuddy', 
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no,toolbar=no`
+        );
+    };
+
     // --- 1) 로그인 전 / 인트로 헤더 ---
     if (!isAppRoute) {
         return (
@@ -86,6 +104,19 @@ export default function Header() {
                 </nav>
 
                 <div className="flex items-center gap-4">
+
+                    {/* ✨ [추가] 미니 모드 버튼 */}
+                    <button
+                        onClick={openMiniChat}
+                        className="p-2 text-slate-400 hover:text-primary-600 hover:bg-slate-100 rounded-full transition-colors"
+                        title="미니 모드로 열기"
+                    >
+                        {/* 아이콘: 작은 창 모양 */}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                    </button>
+
                     <div className="relative cursor-pointer hover:opacity-80 transition hidden sm:block">
                         <span className="text-xl">🔔</span>
                         <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
