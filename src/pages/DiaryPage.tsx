@@ -1,59 +1,90 @@
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom"; // useParams 추가
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDiaryStore } from "../store/useDiaryStore";
+import { useAuthStore } from "../store/useAuthStore";
 
-// ✨ 1. Props 타입 정의 (mode를 받을 수 있게 선언)
 interface DiaryPageProps {
   mode?: "create" | "edit";
 }
 
-// ✨ 2. 컴포넌트에서 props 받기 ({ mode })
 export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams(); // URL에 있는 id 가져오기 (예: /diary/123)
+  const { id } = useParams();
+
+  const { user } = useAuthStore();
   const { addDiary, diaries } = useDiaryStore();
 
-  // 3. 넘어온 데이터 확인 (캘린더에서 클릭해서 왔을 때)
   const { date, originDiary } = location.state || {};
-
-  // 날짜 기본값 설정
   const initialDate = date || new Date().toISOString().split("T")[0];
 
-  // 4. 상태 관리
+  // 상태 관리
   const [targetDate, setTargetDate] = useState(initialDate);
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("행복");
+  // ✨ [추가] 이미지 상태 관리 (문자열 배열)
+  const [images, setImages] = useState<string[]>([]);
+
+  // ✨ [추가] 파일 인풋 제어용 Ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const moods = ["행복", "설렘", "평온", "우울", "화남", "피곤"];
 
-  // ✨ 5. [중요] 수정 모드일 때 데이터 채워넣기 (새로고침 대응)
+  // 데이터 불러오기 (수정 모드일 때)
   useEffect(() => {
     if (mode === "edit") {
-      // 1순위: 캘린더에서 state로 넘겨준 데이터 사용
       if (originDiary) {
         setTargetDate(originDiary.date);
         setContent(originDiary.content);
         setMood(originDiary.mood);
+        // ✨ 기존 이미지가 있다면 불러오기 (없으면 빈 배열)
+        setImages(originDiary.images || []);
       }
-      // 2순위: 새로고침해서 state가 날아갔으면 URL의 id로 스토어에서 찾기
       else if (id) {
         const foundDiary = diaries.find(d => d.id === id);
         if (foundDiary) {
           setTargetDate(foundDiary.date);
           setContent(foundDiary.content);
           setMood(foundDiary.mood);
+          setImages(foundDiary.images || []);
         } else {
           alert("존재하지 않는 일기입니다.");
           navigate("/app/calendar");
         }
       }
     } else {
-      // 생성 모드일 때 날짜가 state로 넘어왔으면 적용
       if (date) setTargetDate(date);
     }
   }, [mode, originDiary, id, diaries, date, navigate]);
 
+  // ✨ [추가] 이미지 파일 선택 핸들러
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 용량 제한 (예: 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("사진 용량이 너무 큽니다. (2MB 이하만 가능)");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // Base64 문자열을 images 배열에 추가
+      if (typeof reader.result === "string") {
+        setImages((prev) => [...prev, reader.result as string]);
+      }
+    };
+    reader.readAsDataURL(file);
+
+    // 같은 파일 연속 선택 가능하게 초기화
+    e.target.value = "";
+  };
+
+  // ✨ [추가] 이미지 삭제 핸들러
+  const removeImage = (indexToRemove: number) => {
+    setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   const handleSave = () => {
     if (!content.trim()) {
@@ -61,15 +92,16 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       return;
     }
 
-    // ID 결정: 수정이면 기존 ID 유지, 생성이면 새 ID 발급
-    // (URL 파라미터 id가 있으면 그걸 쓰고, 없으면 originDiary의 id, 그것도 없으면 새거)
     const diaryId = id || originDiary?.id || Date.now().toString();
 
     addDiary({
       id: diaryId,
+      userId: user?.id || "",
       date: targetDate,
       mood: mood,
       content: content,
+      // ✨ 저장할 때 이미지 배열도 같이 저장
+      images: images,
     });
 
     alert(mode === "edit" ? "일기가 수정되었습니다! ✏️" : "일기가 등록되었습니다! ✍️");
@@ -93,15 +125,15 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
         {/* 기분 선택 */}
         <section>
-          <h3 className="text-sm font-bold text-slate-500 mb-3">오늘의 기분은 어땠나요?</h3>
+          <h3 className="text-sm font-bold text-slate-500 mb-3">오늘의 기분</h3>
           <div className="flex flex-wrap gap-2">
             {moods.map((m) => (
               <button
                 key={m}
                 onClick={() => setMood(m)}
                 className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mood === m
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-300/40 transform scale-105"
-                    : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-100"
+                  ? "bg-primary-600 text-white shadow-md shadow-primary-300/40 transform scale-105"
+                  : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-100"
                   }`}
               >
                 {m}
@@ -110,18 +142,53 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           </div>
         </section>
 
-        {/* 내용 작성 */}
-        <section className="flex-1 h-full">
-          <h3 className="text-sm font-bold text-slate-500 mb-3">오늘의 이야기</h3>
+        {/* 내용 작성 영역 */}
+        <section className="flex-1 flex flex-col gap-4">
+          <div className="flex justify-between items-end">
+            <h3 className="text-sm font-bold text-slate-500">오늘의 이야기</h3>
+
+            {/* ✨ [추가] 사진 첨부 버튼 */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-xs flex items-center gap-1 text-primary-600 font-bold bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition"
+            >
+              📷 사진 추가
+            </button>
+            {/* 숨겨진 파일 인풋 */}
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
+
+          {/* ✨ [추가] 이미지 미리보기 영역 */}
+          {images.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+              {images.map((imgSrc, idx) => (
+                <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-xl border border-gray-200 overflow-hidden group">
+                  <img src={imgSrc} alt="uploaded" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 bg-black/50 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <textarea
-            className="w-full h-80 p-5 rounded-2xl border border-slate-200 bg-white text-slate-700 leading-relaxed 
+            className="w-full h-64 p-5 rounded-2xl border border-slate-200 bg-white text-slate-700 leading-relaxed 
             focus:outline-none focus:border-primary-400 focus:ring-4 focus:ring-primary-50 resize-none shadow-sm placeholder:text-slate-300"
             placeholder="오늘 하루는 어땠나요? 자유롭게 기록해보세요."
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
         </section>
-
       </div>
 
       {/* 하단 저장 버튼 */}

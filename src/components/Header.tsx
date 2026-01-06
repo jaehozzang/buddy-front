@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import HeaderButton from "./HeaderButton";
 import { useAuthStore } from "../store/useAuthStore";
+import { useSearchParams } from "react-router-dom";
 
 export default function Header() {
     const location = useLocation();
@@ -10,6 +11,12 @@ export default function Header() {
 
     const isAppRoute = location.pathname.startsWith("/app");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const [searchParams] = useSearchParams(); // ✨ 파라미터 확인용
+    // ✨ [추가] 만약 URL에 ?mode=mini가 있으면 헤더를 아예 렌더링하지 않음 (null 반환)
+    if (searchParams.get("mode") === "mini") {
+        return null;
+    }
 
     const characterImages: Record<string, string> = {
         hamster: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png",
@@ -33,8 +40,8 @@ export default function Header() {
 
         // 3. 팝업 열기 (toolbar=no, menubar=no 등으로 깔끔하게)
         window.open(
-            '/app/chat?mode=mini', 
-            'MiniBuddy', 
+            '/app/chat?mode=mini',
+            'MiniBuddy',
             `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no,toolbar=no`
         );
     };

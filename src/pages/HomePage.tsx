@@ -13,7 +13,7 @@ const HomePage = () => {
   const { user } = useAuthStore();
 
   const myNickname = user?.nickname || "알 수 없음";
-  const buddyName = user?.buddyName || "Buddy";
+  // const buddyName = user?.buddyName || "Buddy";
   const characterType = user?.characterType || "rabbit";
 
   const [isListening, setIsListening] = useState(false);

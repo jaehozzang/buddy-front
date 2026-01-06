@@ -11,9 +11,11 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-  const selectedDiary = diaries.find((d) => d.date === selectedDateStr);
 
-  // 달력 계산
+  // ✨ [변경 1] 해당 날짜의 일기 '모두' 가져오기 (find -> filter)
+  const dailyDiaries = diaries.filter((d) => d.date === selectedDateStr);
+
+  // 달력 계산 (기존 동일)
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -22,10 +24,16 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-  // --- 수정하기 핸들러 ---
-  const handleEdit = () => {
-    if (!selectedDiary) return;
-    navigate("/app/diary/new", { state: { date: selectedDateStr, originDiary: selectedDiary } });
+  // --- 수정하기 핸들러 (특정 일기를 클릭했을 때) ---
+  const handleEdit = (diary: any) => {
+    // mode: 'edit'를 명시적으로 넘겨주어 DiaryPage에서 인식하게 함
+    navigate("/app/diary/new", {
+      state: {
+        mode: "edit", // DiaryPage props에 맞게 전달
+        date: selectedDateStr,
+        originDiary: diary
+      }
+    });
   };
 
   // --- 새로 쓰기 핸들러 ---
@@ -44,14 +52,16 @@ export default function CalendarPage() {
         const formattedDate = format(day, "d");
         const cloneDay = day;
         const dateKey = format(day, "yyyy-MM-dd");
+
+        // ✨ [변경 2] 점 찍기 로직: 해당 날짜에 일기가 1개라도 있으면 표시
         const hasDiary = diaries.some((d) => d.date === dateKey);
+
         const isSelected = isSameDay(day, selectedDate);
         const isNotCurrentMonth = !isSameMonth(day, monthStart);
 
         days.push(
           <div
             key={day.toString()}
-            // 높이를 h-20 ~ md:h-24 정도로 잡아서 적당한 크기 유지
             className={`relative h-20 md:h-24 border-r border-b border-slate-100 flex flex-col items-start justify-start p-2 cursor-pointer transition-colors
               ${isNotCurrentMonth ? "text-slate-300 bg-slate-50/50" : "text-slate-700 bg-white"}
               ${isSelected ? "bg-primary-50 ring-2 ring-inset ring-primary-200 z-10" : "hover:bg-slate-50"}
@@ -94,18 +104,10 @@ export default function CalendarPage() {
   };
 
   return (
-    // ✨ [수정 포인트]
-    // 1. rounded-2xl: 모서리를 둥글게
-    // 2. border border-slate-200: 전체를 감싸는 회색 테두리 추가
-    // 3. shadow-md: 살짝 그림자를 줘서 떠있는 느낌 (선택사항)
-    <div className="h-full flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 ">
+    <div className="h-full flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200">
 
-      {/* -------------------- */}
-      {/* [왼쪽] 달력 영역 */}
-      {/* -------------------- */}
+      {/* [왼쪽] 달력 영역 (기존과 동일) */}
       <div className="flex-1 flex flex-col min-w-0">
-
-        {/* 달력 헤더 */}
         <div className="flex items-center justify-between px-6 py-5">
           <h2 className="text-xl font-bold text-slate-800">
             {format(currentMonth, "MMMM yyyy")}
@@ -115,8 +117,6 @@ export default function CalendarPage() {
             <button onClick={nextMonth} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500">›</button>
           </div>
         </div>
-
-        {/* 달력 그리드 */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {renderDays()}
           <div className="border-t border-slate-100">
@@ -126,44 +126,75 @@ export default function CalendarPage() {
       </div>
 
       {/* -------------------- */}
-      {/* [오른쪽] 일기 상세 영역 */}
+      {/* ✨ [오른쪽] 일기 상세 영역 (대폭 수정됨) */}
       {/* -------------------- */}
-      <div className="w-full md:w-[380px] border-t md:border-t-0 md:border-l border-slate-200 bg-slate-50/50 flex flex-col h-[40%] md:h-full">
+      <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 bg-slate-50/50 flex flex-col h-[45%] md:h-full">
 
-        {/* 상세 영역 헤더 */}
-        <div className="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
-          <h3 className="text-sm font-bold text-slate-800">
-            {format(selectedDate, "yyyy. MM. dd")} (Today)
-          </h3>
-          {/* 수정 버튼 */}
-          {selectedDiary && (
-            <button
-              onClick={handleEdit}
-              className="text-xs font-bold text-primary-600 hover:bg-primary-50 px-3 py-1.5 rounded-full transition border border-primary-200"
-            >
-              ✏️ Edit
-            </button>
-          )}
+        {/* 1. 상세 영역 헤더 */}
+        <div className="px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0 z-10 shadow-sm">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">
+              {format(selectedDate, "yyyy. MM. dd")}
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {dailyDiaries.length}개의 기록
+            </p>
+          </div>
+
+          {/* ✨ [추가] 일기가 있어도 '새 글 작성' 가능하게 버튼 추가 */}
+          <button
+            onClick={handleWriteNew}
+            className="text-xs font-bold bg-primary-600 text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition shadow-md flex items-center gap-1"
+          >
+            <span>+</span> 기록하기
+          </button>
         </div>
 
-        {/* 상세 내용 */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {selectedDiary ? (
+        {/* 2. 상세 내용 (리스트 형태) */}
+        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+          {dailyDiaries.length > 0 ? (
             <div className="space-y-4 animate-[fade-in_0.3s]">
-              {/* 기분 태그 */}
-              <div className="flex items-center gap-2">
-                <span className="bg-white border border-primary-200 text-primary-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                  {selectedDiary.mood}
-                </span>
-              </div>
+              {dailyDiaries.map((diary) => (
+                <div
+                  key={diary.id}
+                  onClick={() => handleEdit(diary)} // 클릭 시 수정 페이지로
+                  className="group bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-primary-300 transition cursor-pointer relative overflow-hidden"
+                >
+                  {/* 기분 & 시간(선택) */}
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="bg-slate-50 border border-slate-200 text-slate-600 px-2 py-1 rounded-md text-xs font-bold">
+                      {diary.mood}
+                    </span>
+                    <span className="text-[10px] text-slate-300 group-hover:text-primary-400 transition">
+                      수정하기 ›
+                    </span>
+                  </div>
 
-              {/* 일기 본문 */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-600 text-sm leading-7 whitespace-pre-wrap">
-                {selectedDiary.content}
-              </div>
+                  {/* 본문 & 썸네일 */}
+                  <div className="flex gap-4">
+                    {/* 텍스트 (줄임 처리) */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
+                        {diary.content}
+                      </p>
+                    </div>
+
+                    {/* ✨ 이미지가 있으면 썸네일 표시 */}
+                    {diary.images && diary.images.length > 0 && (
+                      <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-100">
+                        <img
+                          src={diary.images[0]}
+                          alt="thumb"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            // 일기 없을 때
+            // 일기 없을 때 (기존 디자인 유지)
             <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 text-2xl">
                 📅
@@ -174,9 +205,9 @@ export default function CalendarPage() {
               </div>
               <button
                 onClick={handleWriteNew}
-                className="mt-2 px-6 py-2.5 bg-primary-600 text-white text-sm font-bold rounded-xl hover:bg-primary-700 transition shadow-lg shadow-primary-200"
+                className="mt-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition"
               >
-                새 일기 작성하기
+                첫 기록 남기기
               </button>
             </div>
           )}
