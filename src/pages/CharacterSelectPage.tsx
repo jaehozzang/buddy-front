@@ -10,7 +10,7 @@ function CharacterSelectPage() {
 
   const receivedNickname = location.state?.userNickname || "";
 
-  // ✨ [수정] 마이크로소프트 3D 애니메이션 이모지 리스트 (7종)
+  // ✨ [수정] 마이크로소프트 3D 애니메이션 이모지 리스트
   const characters = [
     {
       name: "햄스터",
@@ -23,29 +23,9 @@ function CharacterSelectPage() {
       img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png"
     },
     {
-      name: "사자",
-      type: "lion",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Lion.png"
-    },
-    {
       name: "판다",
       type: "panda",
       img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png"
-    },
-    {
-      name: "고양이",
-      type: "cat",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat%20Face.png"
-    },
-    {
-      name: "강아지",
-      type: "dog",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Dog%20Face.png"
-    },
-    {
-      name: "토끼",
-      type: "rabbit",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png"
     },
   ];
 
