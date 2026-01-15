@@ -10,7 +10,7 @@ const commonConfig = {
   headers: {
     'Content-Type': 'application/json',
     // Ngrok 무료 버전 사용 시 브라우저 경고창 무시 (개발용)
-    // 'ngrok-skip-browser-warning': 'true',
+    'ngrok-skip-browser-warning': 'true',
   },
 };
 
