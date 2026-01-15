@@ -1,42 +1,42 @@
-// src/api/axios.ts
-import axios, { AxiosError, type AxiosResponse } from 'axios';
-import type { CommonResponse } from '../types/api';
+import axios from 'axios';
+import { useAuthStore } from '../store/useAuthStore';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+// 1. 공통 설정 (URL, 타임아웃, Ngrok 무시 헤더 등)
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://noncurtailing-unwary-clint.ngrok-free.dev';
 
-export const instance = axios.create({
+const commonConfig = {
   baseURL: BASE_URL,
+  timeout: 5000, // 5초 대기
   headers: {
     'Content-Type': 'application/json',
+    // Ngrok 무료 버전 사용 시 브라우저 경고창 무시 (개발용)
+    // 'ngrok-skip-browser-warning': 'true',
   },
-  timeout: 10000, // 10초 대기
-});
+};
 
-// [응답 인터셉터]
-instance.interceptors.response.use(
-  // 1. 성공(200~299) 시 처리
-  (response: AxiosResponse<CommonResponse>) => {
-    // 백엔드에서 준 데이터 전체({ code, message, result })를 그대로 반환하거나
-    // 여기서 success 여부를 한 번 더 체크할 수도 있습니다.
-    return response; 
-  },
-  
-  // 2. 에러(400~500) 시 처리
-  (error: AxiosError<CommonResponse>) => {
-    if (error.response && error.response.data) {
-      const { code, message } = error.response.data;
-      
-      console.error(`[API Error] ${code}: ${message}`);
+// 2. ✨ [publicApi]: 로그인, 회원가입용 (토큰 절대 안 보냄)
+// 인터셉터가 없으므로 로컬스토리지에 토큰이 있어도 무시하고 깨끗하게 요청합니다.
+export const publicApi = axios.create(commonConfig);
 
-      // 공통 에러 처리 (예: 토큰 만료 시 로그인 페이지로 이동)
-      if (code === 'INVALID_TOKEN' || code === 'TOKEN_EXPIRED') {
-        alert('로그인 정보가 만료되었습니다. 다시 로그인해주세요.');
-        // window.location.href = '/login'; // 강제 이동
-      }
-    } else {
-      console.error('[Network Error] 서버와 연결할 수 없습니다.');
+// 3. 🔒 [authApi]: 로그인 후 사용하는 API (마이페이지, 글쓰기 등)
+// 얘는 요청 전에 토큰을 가로채서 붙입니다.
+export const authApi = axios.create(commonConfig);
+
+authApi.interceptors.request.use(
+  (config) => {
+    // 스토어에서 토큰 가져오기 (없으면 로컬스토리지 확인)
+    const token = useAuthStore.getState().accessToken || localStorage.getItem('accessToken');
+
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
+    return config;
+  },
+  (error) => {
     return Promise.reject(error);
   }
 );
+
+// 기본 export보다는 명시적으로 이름으로 가져다 쓰는 것을 추천합니다.
+// export default axiosInstance; (삭제)

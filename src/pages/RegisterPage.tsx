@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function RegisterPage() {
-  // 1. 입력값을 저장할 상태(State) 추가
-  const [userId, setUserId] = useState("");
+  const [email, setEmail] = useState(""); // userId -> email
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
@@ -15,22 +14,26 @@ function RegisterPage() {
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 2. 유효성 검사 (빈칸 체크)
-    if (!userId.trim() || !password.trim()) {
-      alert("아이디와 비밀번호를 입력해주세요.");
+    if (!email.trim() || !password.trim()) {
+      alert("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+    
+    // 간단한 이메일 형식 체크 (선택사항)
+    if (!email.includes("@")) {
+      alert("올바른 이메일 형식이 아닙니다.");
       return;
     }
 
-    // 3. 비밀번호 일치 확인
     if (password !== passwordConfirm) {
       alert("비밀번호가 일치하지 않습니다!");
       return;
     }
 
-    // 4. 다음 페이지로 데이터(ID, PW) 배달! 🚚
+    // ★ 중요: 다음 페이지(닉네임/캐릭터 선택)로 입력한 이메일/비번을 전달합니다.
     navigate("/auth/register/nickname", {
       state: {
-        userId: userId,
+        email: email,     // 다음 페이지에서 useLocation().state.email 로 받음
         password: password
       }
     });
@@ -39,30 +42,29 @@ function RegisterPage() {
   return (
     <div className="min-h-[calc(100vh-150px)] flex justify-center items-center bg-white">
       <div className="rounded-2xl border border-primary-200 shadow-md bg-white px-10 py-10 w-[380px]">
-
+        
         <form className="flex flex-col gap-4" onSubmit={handleNext}>
-
-          {/* ID 입력 */}
+          {/* EMAIL 입력 (ID -> EMAIL) */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">👤</span>
             <input
-              type="text"
-              placeholder="ID"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)} // 입력값 저장
+              type="text" // or email
+              placeholder="EMAIL"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-md bg-white border border-primary-200 px-10 py-3 
               text-sm text-slate-700 focus:outline-none focus:border-primary-400"
             />
           </div>
 
-          {/* PASSWORD 입력 */}
+          {/* PASSWORD 입력 (동일) */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">🔒</span>
             <input
               type={showPassword ? "text" : "password"}
               placeholder="PASSWORD"
               value={password}
-              onChange={(e) => setPassword(e.target.value)} // 입력값 저장
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-md bg-white border border-primary-200 px-10 py-3
               text-sm text-slate-700 focus:outline-none focus:border-primary-400"
             />
@@ -75,18 +77,20 @@ function RegisterPage() {
             </button>
           </div>
 
-          {/* PASSWORD CONFIRM 입력 */}
+           {/* PASSWORD CONFIRM (동일) */}
           <div className="relative">
+             {/* ... (생략: 기존 코드와 동일) ... */}
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">🔒</span>
             <input
               type={showPasswordConfirm ? "text" : "password"}
               placeholder="PASSWORD CONFIRM"
               value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)} // 입력값 저장
+              onChange={(e) => setPasswordConfirm(e.target.value)}
               className="w-full rounded-md bg-white border border-primary-200 px-10 py-3
               text-sm text-slate-700 focus:outline-none focus:border-primary-400"
             />
-            <button
+             {/* ... 버튼 ... */}
+             <button
               type="button"
               onClick={() => setShowPasswordConfirm((prev) => !prev)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 cursor-pointer"

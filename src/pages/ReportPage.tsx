@@ -1,51 +1,90 @@
-import { useState, useMemo } from "react";
-import { useDiaryStore } from "../store/useDiaryStore";
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, getDaysInMonth } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, subMonths, addMonths, getDaysInMonth } from "date-fns";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { diaryApi } from "../api/diaryApi"; // ✨ API import
+import { IS_TEST_MODE } from "../config"; // ✨ 설정 import
+import type { DiarySummary } from "../types/diary";
 
 export default function ReportPage() {
-    const { diaries } = useDiaryStore();
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
-    // --- 1. 데이터 계산 로직 ---
+    // ✨ 서버에서 받아온 데이터를 저장할 상태
+    const [monthlyDiaries, setMonthlyDiaries] = useState<DiarySummary[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    // 현재 보고 있는 달의 시작과 끝
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
+    // --- 1. 데이터 가져오기 ---
+    useEffect(() => {
+        const fetchMonthlyData = async () => {
+            setLoading(true);
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth() + 1;
+
+            try {
+                if (IS_TEST_MODE) {
+                    // 🧪 [TEST] 가짜 데이터 생성 (태그 기반)
+                    console.log(`[TEST] ${year}-${month} 리포트 데이터 조회`);
+                    await new Promise(r => setTimeout(r, 800)); // 로딩 연출
+
+                    setMonthlyDiaries([
+                        { diarySeq: 1, title: "aaa", summary: "s", createAt: "2024-01-01", tags: ["행복", "뿌듯"] },
+                        { diarySeq: 2, title: "bbb", summary: "s", createAt: "2024-01-02", tags: ["행복", "맛집"] },
+                        { diarySeq: 3, title: "ccc", summary: "s", createAt: "2024-01-03", tags: ["피곤", "야근"] },
+                        { diarySeq: 4, title: "ddd", summary: "s", createAt: "2024-01-05", tags: ["행복", "데이트"] },
+                        { diarySeq: 5, title: "eee", summary: "s", createAt: "2024-01-10", tags: ["우울", "비"] },
+                    ]);
+                } else {
+                    // 🚀 [REAL] 서버 요청
+                    const response = await diaryApi.getMonthlyDiaries(year, month);
+                    if (response.result && Array.isArray(response.result)) {
+                        setMonthlyDiaries(response.result);
+                    } else {
+                        setMonthlyDiaries([]);
+                    }
+                }
+            } catch (error) {
+                console.error("리포트 로딩 실패:", error);
+                setMonthlyDiaries([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMonthlyData();
+    }, [currentMonth]);
+
+
+    // --- 2. 통계 계산 로직 (태그 기준) ---
+
     const totalDaysInMonth = getDaysInMonth(currentMonth);
 
-    // 이번 달 일기만 필터링
-    const monthlyDiaries = useMemo(() => {
-        return diaries.filter((diary) => {
-            const diaryDate = new Date(diary.date);
-            return diaryDate >= monthStart && diaryDate <= monthEnd;
-        });
-    }, [diaries, currentMonth]);
-
-    // 감정별 개수 세기 (예: { 행복: 5, 우울: 2 })
-    const moodStats = useMemo(() => {
+    // 태그별 개수 세기 (예: { 행복: 3, 피곤: 1 ... })
+    const tagStats = useMemo(() => {
         const stats: Record<string, number> = {};
+
         monthlyDiaries.forEach((diary) => {
-            stats[diary.mood] = (stats[diary.mood] || 0) + 1;
+            // 각 일기의 태그 배열을 순회
+            diary.tags.forEach((tag) => {
+                stats[tag] = (stats[tag] || 0) + 1;
+            });
         });
         return stats;
     }, [monthlyDiaries]);
 
-    // 차트용 데이터 변환 (배열 형태)
-    const chartData = Object.keys(moodStats).map((mood) => ({
-        name: mood,
-        value: moodStats[mood],
+    // 차트용 데이터 변환
+    const chartData = Object.keys(tagStats).map((tag) => ({
+        name: tag,
+        value: tagStats[tag],
     }));
 
-    // 가장 많이 느낀 감정 찾기
-    const topMood = useMemo(() => {
+    // 가장 많이 나온 태그 찾기
+    const topTag = useMemo(() => {
         if (chartData.length === 0) return "-";
         // value가 가장 큰 항목을 찾음
         const max = chartData.reduce((prev, current) => (prev.value > current.value ? prev : current));
         return max.name;
     }, [chartData]);
 
-    // 차트 색상 팔레트 (Buddy 앱 테마와 어울리는 파스텔톤)
+    // 차트 색상 팔레트
     const COLORS = ["#FFBB28", "#FF8042", "#00C49F", "#0088FE", "#8884d8", "#FF6B6B"];
 
     // --- 핸들러 ---
@@ -55,7 +94,7 @@ export default function ReportPage() {
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden rounded-2xl border border-slate-200">
 
-            {/* 1. 상단 헤더 (달력 페이지와 통일감) */}
+            {/* 1. 상단 헤더 */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
                 <h2 className="text-xl font-bold text-slate-800">
                     {format(currentMonth, "MMMM yyyy")} Report
@@ -66,11 +105,15 @@ export default function ReportPage() {
                 </div>
             </div>
 
-            {/* 2. 메인 콘텐츠 영역 (스크롤 가능) */}
+            {/* 2. 메인 콘텐츠 영역 */}
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
 
-                {monthlyDiaries.length > 0 ? (
-                    <div className="max-w-4xl mx-auto space-y-6">
+                {loading ? (
+                    <div className="h-full flex items-center justify-center text-slate-400">
+                        데이터 분석 중... 📊
+                    </div>
+                ) : monthlyDiaries.length > 0 ? (
+                    <div className="max-w-4xl mx-auto space-y-6 animate-[fade-in_0.5s]">
 
                         {/* 요약 카드 그리드 */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -83,11 +126,11 @@ export default function ReportPage() {
                                 </span>
                             </div>
 
-                            {/* 카드 2: 최다 감정 */}
+                            {/* 카드 2: 최다 태그 (변경됨: Mood -> Keyword) */}
                             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-2">
-                                <span className="text-4xl">👑</span>
-                                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Top Mood</span>
-                                <span className="text-3xl font-bold text-primary-600">{topMood}</span>
+                                <span className="text-4xl">🏷️</span>
+                                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Top Keyword</span>
+                                <span className="text-3xl font-bold text-primary-600">#{topTag}</span>
                             </div>
 
                             {/* 카드 3: 달성률 */}
@@ -131,15 +174,15 @@ export default function ReportPage() {
                             {/* 오른쪽: 분석 텍스트 */}
                             <div className="w-full md:w-1/2 space-y-4">
                                 <h3 className="text-lg font-bold text-slate-800">
-                                    이번 달의 감정 분석
+                                    이번 달의 키워드 분석
                                 </h3>
                                 <p className="text-slate-600 text-sm leading-relaxed">
-                                    이번 달에는 <span className="text-primary-600 font-bold">{topMood}</span>을(를) 가장 많이 느끼셨네요!
+                                    이번 달에는 <span className="text-primary-600 font-bold">#{topTag}</span> 키워드가 가장 많이 등장했네요!
                                     총 <strong>{monthlyDiaries.length}</strong>개의 기록을 남겨주셨어요.
                                     <br /><br />
-                                    {topMood === "행복" || topMood === "설렘" || topMood === "평온"
-                                        ? "긍정적인 에너지가 가득한 한 달이었군요! 이 기운을 다음 달까지 쭉 이어가봐요. 🥰"
-                                        : "조금은 힘든 날들도 있었지만, 감정을 솔직하게 기록한 것만으로도 큰 의미가 있어요. 다음 달엔 더 웃을 일이 많을 거예요! 💪"
+                                    {["행복", "기쁨", "설렘", "감사", "평온"].includes(topTag)
+                                        ? "긍정적인 에너지가 가득한 한 달이었군요! 이 좋은 흐름을 다음 달까지 쭉 이어가봐요. 🥰"
+                                        : `"${topTag}"(이)라는 감정을 자주 느끼셨군요. 자신의 감정을 솔직하게 기록하는 것은 마음을 돌보는 첫걸음이에요. 다음 달엔 더 즐거운 일이 많을 거예요! 💪`
                                     }
                                 </p>
                             </div>
@@ -147,7 +190,7 @@ export default function ReportPage() {
 
                     </div>
                 ) : (
-                    // 데이터가 없을 때 (빈 화면)
+                    // 데이터가 없을 때
                     <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
                         <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 text-4xl">
                             📊
