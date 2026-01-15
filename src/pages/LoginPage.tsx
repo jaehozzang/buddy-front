@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Link 추가
 import { useAuthStore } from "../store/useAuthStore";
-// ✨ [수정 1] authApi -> authService로 이름 변경해서 가져오기
 import { authService } from "../api/authApi";
 import { AxiosError } from "axios";
 import { IS_TEST_MODE } from "../config";
+import SocialLoginSection from "../components/SocialLoginSection"; // 컴포넌트 import
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ function LoginPage() {
     }
     try {
       if (IS_TEST_MODE) {
-        // ... (테스트 모드 코드는 그대로)
+        // ... (테스트 모드 로직 유지)
         console.log("🛠️ [TEST MODE] 로그인 시도...", email);
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -46,8 +46,6 @@ function LoginPage() {
 
       } else {
         // 🚀 [REAL SERVER]
-        // ✨ [수정 2] authApi.login -> authService.login 으로 변경
-        // 이제 publicApi를 통해 토큰 없이 깨끗하게 요청이 날아갑니다.
         const response = await authService.login({ email, password });
 
         if (response.code === "S000") {
@@ -67,11 +65,11 @@ function LoginPage() {
   };
 
   return (
-    // ... JSX 부분은 동일합니다 ...
     <div className="min-h-[calc(100vh-150px)] flex justify-center items-center bg-white">
       <div className="rounded-2xl border border-primary-200 shadow-md bg-white px-10 py-10 w-[380px]">
         <form className="flex flex-col gap-4" onSubmit={handleLogin}>
-          {/* ... input 필드들 ... */}
+
+          {/* 이메일 입력 */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">👤</span>
             <input
@@ -84,6 +82,7 @@ function LoginPage() {
             />
           </div>
 
+          {/* 비밀번호 입력 */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">🔒</span>
             <input
@@ -112,23 +111,19 @@ function LoginPage() {
           </button>
         </form>
 
-        {/* ... 하단 버튼들 ... */}
-        <div className="mt-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-primary-100" />
-          <div className="h-px flex-1 bg-primary-100" />
+        {/* 👇 [수정] 구분선 및 소셜 버튼 코드를 컴포넌트로 교체 */}
+        <SocialLoginSection />
+
+        {/* 👇 [추가] 회원가입 페이지 이동 링크 (UX 개선) */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-slate-400">
+            아직 계정이 없으신가요?{" "}
+            <Link to="/auth/register" className="text-primary-600 font-medium hover:underline">
+              회원가입
+            </Link>
+          </p>
         </div>
 
-        <div className="mt-6 flex justify-center gap-4">
-          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-primary-50 transition shadow-sm">
-            <img src="/oauth/google_circle.svg" alt="google" className="w-8 h-8" />
-          </button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-primary-50 transition shadow-sm">
-            <img src="/oauth/kakao.svg" alt="kakao" className="w-8 h-8" />
-          </button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-primary-50 transition shadow-sm">
-            <img src="/oauth/naver.svg" alt="naver" className="w-8 h-8" />
-          </button>
-        </div>
       </div>
     </div>
   );

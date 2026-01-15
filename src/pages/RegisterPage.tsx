@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Link 추가
+import SocialLoginSection from "../components/SocialLoginSection";
 
 function RegisterPage() {
-  const [email, setEmail] = useState(""); // userId -> email
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
@@ -18,8 +19,7 @@ function RegisterPage() {
       alert("이메일과 비밀번호를 입력해주세요.");
       return;
     }
-    
-    // 간단한 이메일 형식 체크 (선택사항)
+
     if (!email.includes("@")) {
       alert("올바른 이메일 형식이 아닙니다.");
       return;
@@ -30,25 +30,21 @@ function RegisterPage() {
       return;
     }
 
-    // ★ 중요: 다음 페이지(닉네임/캐릭터 선택)로 입력한 이메일/비번을 전달합니다.
     navigate("/auth/register/nickname", {
-      state: {
-        email: email,     // 다음 페이지에서 useLocation().state.email 로 받음
-        password: password
-      }
+      state: { email, password }
     });
   };
 
   return (
     <div className="min-h-[calc(100vh-150px)] flex justify-center items-center bg-white">
       <div className="rounded-2xl border border-primary-200 shadow-md bg-white px-10 py-10 w-[380px]">
-        
+
         <form className="flex flex-col gap-4" onSubmit={handleNext}>
-          {/* EMAIL 입력 (ID -> EMAIL) */}
+          {/* EMAIL */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">👤</span>
             <input
-              type="text" // or email
+              type="text"
               placeholder="EMAIL"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -57,7 +53,7 @@ function RegisterPage() {
             />
           </div>
 
-          {/* PASSWORD 입력 (동일) */}
+          {/* PASSWORD */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">🔒</span>
             <input
@@ -77,9 +73,8 @@ function RegisterPage() {
             </button>
           </div>
 
-           {/* PASSWORD CONFIRM (동일) */}
+          {/* PASSWORD CONFIRM */}
           <div className="relative">
-             {/* ... (생략: 기존 코드와 동일) ... */}
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">🔒</span>
             <input
               type={showPasswordConfirm ? "text" : "password"}
@@ -89,8 +84,7 @@ function RegisterPage() {
               className="w-full rounded-md bg-white border border-primary-200 px-10 py-3
               text-sm text-slate-700 focus:outline-none focus:border-primary-400"
             />
-             {/* ... 버튼 ... */}
-             <button
+            <button
               type="button"
               onClick={() => setShowPasswordConfirm((prev) => !prev)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 cursor-pointer"
@@ -108,22 +102,19 @@ function RegisterPage() {
           </button>
         </form>
 
-        <div className="mt-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-primary-100" />
-          <div className="h-px flex-1 bg-primary-100" />
+        {/* 👇 구분선 코드를 지우고 컴포넌트만 남김 (컴포넌트 안에 구분선이 있다고 가정) */}
+        <SocialLoginSection />
+
+        {/* 👇 [추가 팁] 로그인 페이지로 돌아가는 링크 */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-slate-400">
+            이미 계정이 있으신가요?{" "}
+            <Link to="/auth/login" className="text-primary-600 font-medium hover:underline">
+              로그인하기
+            </Link>
+          </p>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2 text-sm tracking-[0.08em]">
-          <button className="w-full rounded-md border border-primary-200 bg-white py-2 px-4 text-left hover:bg-primary-50 transition">
-            OAUTH(GOOGLE)
-          </button>
-          <button className="w-full rounded-md border border-primary-200 bg-white py-2 px-4 text-left hover:bg-primary-50 transition">
-            OAUTH(KAKAO)
-          </button>
-          <button className="w-full rounded-md border border-primary-200 bg-white py-2 px-4 text-left hover:bg-primary-50 transition">
-            OAUTH(NAVER)
-          </button>
-        </div>
       </div>
     </div>
   );
