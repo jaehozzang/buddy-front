@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { diaryApi } from "../api/diaryApi"; // ✨ API import
+import { diaryApi } from "../api/diaryApi";
 import { AxiosError } from "axios";
 import { IS_TEST_MODE } from "../config";
 
@@ -11,25 +11,22 @@ interface DiaryPageProps {
 export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams(); // URL 파라미터로 넘어온 diarySeq (문자열)
+  const { id } = useParams();
 
-  // CalendarPage에서 넘겨준 날짜나 데이터
+  // CalendarPage에서 넘겨준 날짜 (없으면 오늘)
   const { date } = location.state || {};
 
-  // 상태 관리
-  const [targetDate] = useState(date || new Date().toISOString().split("T")[0]);
-  const [content, setContent] = useState("");
-  const [title, setTitle] = useState(""); // ✨ 제목 추가 (API 필수값)
+  // ✨ [수정 1] 날짜를 변경할 수 있도록 state 초기값 설정
+  const [targetDate, setTargetDate] = useState(date || new Date().toISOString().split("T")[0]);
 
-  // ✨ 태그 관리 (Mood 대신 사용)
+  const [content, setContent] = useState("");
+  const [title, setTitle] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [inputTag, setInputTag] = useState("");
-
-  // ✨ 이미지 (현재는 Base64 미리보기만 구현, 서버 전송 로직은 API 명세 확인 필요)
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 데이터 불러오기 (수정 모드일 때)
+  // 데이터 불러오기
   useEffect(() => {
     if (mode === "edit" && id) {
       fetchDiaryDetail(Number(id));
@@ -38,22 +35,18 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
   const fetchDiaryDetail = async (diarySeq: number) => {
     try {
-
       if (IS_TEST_MODE) {
-        // [TEST] 가짜 데이터
         setTitle("테스트 일기");
         setContent("서버에서 불러온 내용입니다.");
         setTags(["행복", "코딩"]);
-        // setImages(...)
       } else {
         const response = await diaryApi.getDiaryDetail(diarySeq);
         if (response.result) {
           const d = response.result;
           setTitle(d.title);
           setContent(d.content);
-          // 서버 태그 구조({tagSeq, name})를 문자열 배열로 변환
           setTags(d.tags.map(t => t.name));
-          // setImages(d.imageUrl ? [d.imageUrl] : []);
+          // 만약 조회된 일기의 날짜도 불러와야 한다면 여기서 setTargetDate(d.date) 필요
         }
       }
     } catch (error) {
@@ -63,11 +56,9 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
-  // 태그 추가 핸들러 (엔터 키)
+  // 태그 핸들러
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // ✨ [수정] 한글 조합 중(IME)일 때는 이벤트 무시! (이 코드가 핵심)
     if (e.nativeEvent.isComposing) return;
-
     if (e.key === "Enter" && inputTag.trim()) {
       e.preventDefault();
       if (!tags.includes(inputTag.trim())) {
@@ -77,12 +68,11 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
-  // 태그 삭제 핸들러
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  // 이미지 업로드 (Base64 미리보기만)
+  // 이미지 핸들러
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -102,28 +92,40 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  // ✨ 저장 핸들러
+  // ✨ [추가] 삭제 핸들러
+  const handleDelete = async () => {
+    if (!window.confirm("정말 이 일기를 삭제하시겠습니까? (복구 불가)")) return;
+
+    try {
+      if (IS_TEST_MODE) {
+        alert("삭제 완료 (테스트)");
+      } else if (id) {
+        await diaryApi.deleteDiary(Number(id)); // API 함수 필요
+        alert("일기가 삭제되었습니다.");
+      }
+      navigate("/app/calendar", { replace: true });
+    } catch (error) {
+      console.error("삭제 실패", error);
+      alert("삭제 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 저장 핸들러
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 모두 입력해주세요!");
       return;
     }
 
-    // 🚧 [주의] 태그 처리: API는 tagSeqs(숫자 배열)를 요구합니다.
-    // 하지만 지금은 태그 목록 조회 API가 없어서, 임시로 [1] 같은 더미 ID를 보냅니다.
-    // 실제로는 "태그 생성 API"를 먼저 호출하거나, 백엔드가 문자열 태그를 받아줘야 합니다.
-    // const dummyTagSeqs = [1];
-
-    // ✅ 변경: 명세서대로 'tags' 필드에 문자열 배열(tags state) 그대로 전송
     const requestData = {
       title: title,
       content: content,
       imageUrl: images[0] || "",
-      tags: tags // ["행복", "맛집"] 형태의 문자열 배열
+      tags: tags,
+      date: targetDate, // ✨ [수정 2] 날짜 데이터 포함 전송!
     };
 
     try {
-
       if (IS_TEST_MODE) {
         console.log("[TEST] 저장 데이터:", requestData);
         await new Promise(r => setTimeout(r, 500));
@@ -153,15 +155,21 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         <button onClick={() => navigate(-1)} className="text-xl text-slate-400 hover:text-slate-600">
           ←
         </button>
-        <span className="font-bold text-slate-800">
-          {targetDate} {mode === "edit" ? "수정하기" : "기록하기"}
-        </span>
+
+        {/* ✨ [수정 3] 날짜 선택기 (DatePicker) 적용 */}
+        <input
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+        />
+
         <div className="w-6" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-        {/* 1. 제목 입력 (API 필수값) */}
+        {/* 1. 제목 */}
         <section>
           <input
             type="text"
@@ -172,7 +180,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           />
         </section>
 
-        {/* 2. 태그 입력 (Mood 대체) */}
+        {/* 2. 태그 */}
         <section>
           <h3 className="text-sm font-bold text-slate-500 mb-3">태그 (Enter로 추가)</h3>
           <div className="flex flex-wrap gap-2 mb-2">
@@ -212,7 +220,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
             />
           </div>
 
-          {/* 이미지 미리보기 */}
           {images.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
               {images.map((imgSrc, idx) => (
@@ -239,14 +246,25 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         </section>
       </div>
 
-      {/* 저장 버튼 */}
-      <div className="p-4 bg-white border-t border-gray-100">
+      {/* 저장 및 삭제 버튼 */}
+      <div className="p-4 bg-white border-t border-gray-100 flex gap-3">
+
+        {/* ✨ [추가] 삭제 버튼 (수정 모드일 때만 보임) */}
+        {mode === 'edit' && (
+          <button
+            onClick={handleDelete}
+            className="px-5 py-4 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition"
+          >
+            삭제
+          </button>
+        )}
+
         <button
           onClick={handleSave}
-          className="w-full bg-primary-600 text-white py-4 rounded-xl font-bold text-lg 
+          className="flex-1 bg-primary-600 text-white py-4 rounded-xl font-bold text-lg 
           shadow-lg shadow-primary-300/30 hover:bg-primary-700 transition active:scale-[0.98]"
         >
-          {mode === "edit" ? "수정완료" : "저장하기"}
+          {mode === "edit" ? "수정 완료" : "저장하기"}
         </button>
       </div>
     </div>
