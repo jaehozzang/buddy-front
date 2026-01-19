@@ -6,6 +6,8 @@ import {
   useLocation,
 } from "react-router-dom";
 
+import { useAuthStore } from "./store/useAuthStore";
+
 import Header from "./components/Header";
 
 import IntroPage from "./pages/IntroPage";
@@ -25,7 +27,7 @@ import ReportPage from "./pages/ReportPage";
 function App() {
   const location = useLocation();
   const isAppRoute = location.pathname.startsWith("/app");
-  const isLoggedIn = true; // TODO: 진짜 로그인 상태로 교체
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col">
