@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 // 1. 공통 설정 (URL, 타임아웃, Ngrok 무시 헤더 등)
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://noncurtailing-unwary-clint.ngrok-free.dev';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://port-0-buddy-api-mkf1uqt1c2f0d71f.sel3.cloudtype.app';
 
 const commonConfig = {
   baseURL: BASE_URL,
