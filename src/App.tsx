@@ -36,7 +36,10 @@ function App() {
       <main className={`flex-1 ${isAppRoute ? "" : "px-6 py-10"}`}>
         <Routes>
           {/* 로그인 전 페이지들 */}
-          <Route path="/" element={<IntroPage />} />
+          <Route
+            path="/"
+            element={isLoggedIn ? <Navigate to="/app" replace /> : <IntroPage />}
+          />
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/register" element={<RegisterPage />} />
           <Route
