@@ -16,9 +16,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   // CalendarPage에서 넘겨준 날짜 (없으면 오늘)
   const { date } = location.state || {};
 
-  // ✨ [수정 1] 날짜를 변경할 수 있도록 state 초기값 설정
   const [targetDate, setTargetDate] = useState(date || new Date().toISOString().split("T")[0]);
-
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -26,7 +24,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 데이터 불러오기
+  // --- 데이터 불러오기 및 핸들러 로직 (기존과 동일) ---
   useEffect(() => {
     if (mode === "edit" && id) {
       fetchDiaryDetail(Number(id));
@@ -46,7 +44,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           setTitle(d.title);
           setContent(d.content);
           setTags(d.tags.map(t => t.name));
-          // 만약 조회된 일기의 날짜도 불러와야 한다면 여기서 setTargetDate(d.date) 필요
         }
       }
     } catch (error) {
@@ -56,7 +53,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
-  // 태그 핸들러
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
     if (e.key === "Enter" && inputTag.trim()) {
@@ -72,7 +68,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  // 이미지 핸들러
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -92,15 +87,13 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  // ✨ [추가] 삭제 핸들러
   const handleDelete = async () => {
     if (!window.confirm("정말 이 일기를 삭제하시겠습니까? (복구 불가)")) return;
-
     try {
       if (IS_TEST_MODE) {
         alert("삭제 완료 (테스트)");
       } else if (id) {
-        await diaryApi.deleteDiary(Number(id)); // API 함수 필요
+        await diaryApi.deleteDiary(Number(id));
         alert("일기가 삭제되었습니다.");
       }
       navigate("/app/calendar", { replace: true });
@@ -110,21 +103,18 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
-  // 저장 핸들러
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 모두 입력해주세요!");
       return;
     }
-
     const requestData = {
       title: title,
       content: content,
       imageUrl: images[0] || "",
       tags: tags,
-      date: targetDate, // ✨ [수정 2] 날짜 데이터 포함 전송!
+      date: targetDate,
     };
-
     try {
       if (IS_TEST_MODE) {
         console.log("[TEST] 저장 데이터:", requestData);
@@ -148,69 +138,101 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
+  // --- ✨ UI 렌더링 시작 (여기가 바뀌었습니다) ---
   return (
-    <div className="h-full flex flex-col bg-slate-50">
+    // [변경 포인트] 캘린더 페이지와 똑같은 "카드형 컨테이너" 스타일 적용
+    <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+
       {/* 헤더 */}
-      <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100">
-        <button onClick={() => navigate(-1)} className="text-xl text-slate-400 hover:text-slate-600">
+      <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
+        {/* 1. 뒤로가기 버튼 */}
+        <button
+          onClick={() => navigate(-1)}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
+        >
           ←
         </button>
 
-        {/* ✨ [수정 3] 날짜 선택기 (DatePicker) 적용 */}
+        {/* 2. 날짜 선택기 (중앙) */}
         <input
           type="date"
           value={targetDate}
           onChange={(e) => setTargetDate(e.target.value)}
-          className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+          className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer text-center hover:bg-slate-50 px-2 py-1 rounded transition"
         />
 
-        <div className="w-6" />
+        {/* 3. ✨ [변경] 삭제 버튼 (오른쪽 상단) */}
+        {mode === 'edit' ? (
+          <button
+            onClick={handleDelete}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
+            title="삭제하기"
+          >
+            {/* 휴지통 SVG 아이콘 */}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            </svg>
+          </button>
+        ) : (
+          // 생성 모드일 때는 균형을 맞추기 위한 빈 박스 유지
+          <div className="w-8" />
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* 스크롤 영역 */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
 
-        {/* 1. 제목 */}
+        {/* 1. 제목 입력 */}
         <section>
           <input
             type="text"
             placeholder="제목을 입력하세요"
-            className="w-full text-xl font-bold bg-transparent border-b border-slate-200 py-2 focus:outline-none focus:border-primary-500 placeholder:text-slate-300"
+            className="w-full text-2xl font-bold bg-transparent border-b border-slate-100 py-3 focus:outline-none focus:border-primary-400 placeholder:text-slate-300 transition-colors"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </section>
 
-        {/* 2. 태그 */}
+        {/* 2. 태그 입력 */}
         <section>
-          <h3 className="text-sm font-bold text-slate-500 mb-3">태그 (Enter로 추가)</h3>
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm font-bold text-slate-500">태그</span>
+            <span className="text-[10px] text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded">Enter로 추가</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-3">
             {tags.map((tag) => (
-              <span key={tag} className="bg-primary-50 text-primary-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+              <span key={tag} className="bg-primary-50 text-primary-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">
                 #{tag}
-                <button onClick={() => removeTag(tag)} className="hover:text-primary-900">×</button>
+                <button onClick={() => removeTag(tag)} className="hover:text-primary-900 text-lg leading-3">×</button>
               </span>
             ))}
+
+            {/* 태그 입력창을 태그들 뒤에 자연스럽게 배치 */}
+            <input
+              type="text"
+              value={inputTag}
+              onChange={(e) => setInputTag(e.target.value)}
+              onKeyDown={handleTagKeyDown}
+              placeholder="태그 입력..."
+              className="bg-transparent min-w-[100px] text-sm py-1.5 focus:outline-none placeholder:text-slate-300"
+            />
           </div>
-          <input
-            type="text"
-            value={inputTag}
-            onChange={(e) => setInputTag(e.target.value)}
-            onKeyDown={handleTagKeyDown}
-            placeholder="예: 행복, 맛집"
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-400"
-          />
         </section>
 
         {/* 3. 내용 및 사진 */}
         <section className="flex-1 flex flex-col gap-4">
-          <div className="flex justify-between items-end">
+          <div className="flex justify-between items-center">
             <h3 className="text-sm font-bold text-slate-500">오늘의 이야기</h3>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="text-xs flex items-center gap-1 text-primary-600 font-bold bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition"
-            >
-              📷 사진 추가
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs flex items-center gap-1 text-slate-500 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
+              >
+                📷 사진 추가
+              </button>
+            </div>
+
             <input
               type="file"
               accept="image/*"
@@ -220,14 +242,15 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
             />
           </div>
 
+          {/* 이미지 미리보기 */}
           {images.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
               {images.map((imgSrc, idx) => (
-                <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-xl border border-gray-200 overflow-hidden group">
+                <div key={idx} className="relative flex-shrink-0 w-32 h-32 rounded-xl border border-slate-100 overflow-hidden group shadow-sm">
                   <img src={imgSrc} alt="uploaded" className="w-full h-full object-cover" />
                   <button
                     onClick={() => removeImage(idx)}
-                    className="absolute top-1 right-1 bg-black/50 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition"
+                    className="absolute top-2 right-2 bg-black/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition backdrop-blur-sm"
                   >
                     ✕
                   </button>
@@ -237,8 +260,8 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           )}
 
           <textarea
-            className="w-full h-64 p-5 rounded-2xl border border-slate-200 bg-white text-slate-700 leading-relaxed 
-            focus:outline-none focus:border-primary-400 focus:ring-4 focus:ring-primary-50 resize-none shadow-sm placeholder:text-slate-300"
+            className="w-full h-80 p-5 rounded-2xl border border-slate-200 bg-slate-50/30 text-slate-700 leading-relaxed 
+            focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all resize-none placeholder:text-slate-300"
             placeholder="자유롭게 기록해보세요."
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -246,25 +269,17 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         </section>
       </div>
 
-      {/* 저장 및 삭제 버튼 */}
-      <div className="p-4 bg-white border-t border-gray-100 flex gap-3">
-
-        {/* ✨ [추가] 삭제 버튼 (수정 모드일 때만 보임) */}
-        {mode === 'edit' && (
-          <button
-            onClick={handleDelete}
-            className="px-5 py-4 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition"
-          >
-            삭제
-          </button>
-        )}
+      {/* 하단 버튼 영역 */}
+      <div className="p-4 bg-white border-t border-slate-100 flex-shrink-0">
+        {/* ✨ 삭제 버튼 코드 제거함 */}
 
         <button
           onClick={handleSave}
-          className="flex-1 bg-primary-600 text-white py-4 rounded-xl font-bold text-lg 
-          shadow-lg shadow-primary-300/30 hover:bg-primary-700 transition active:scale-[0.98]"
+          className="w-full bg-primary-600 text-white py-3 rounded-xl font-bold text-lg 
+    shadow-lg shadow-primary-200 hover:bg-primary-700 transition active:scale-[0.98] flex items-center justify-center gap-2"
         >
-          {mode === "edit" ? "수정 완료" : "저장하기"}
+          <span>{mode === "edit" ? "수정 완료" : "기록 저장하기"}</span>
+          {mode !== "edit" && <span className="opacity-70 text-sm font-normal">Enter</span>}
         </button>
       </div>
     </div>
