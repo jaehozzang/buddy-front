@@ -36,6 +36,7 @@ export interface SignupRequest {
   password: string;
   nickname: string;
   characterSeq: number;
+  characterNickname: string;
 }
 
 // 회원가입 성공 시 서버가 Member 정보를 그대로 줍니다.

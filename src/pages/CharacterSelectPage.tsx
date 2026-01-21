@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-// ✨ [수정 1] authApi -> authService로 이름 변경
 import { authService } from "../api/authApi";
 import { AxiosError } from "axios";
 import { IS_TEST_MODE } from "../config";
@@ -10,7 +9,6 @@ function CharacterSelectPage() {
   const location = useLocation();
   const { email, password, userNickname } = location.state || {};
 
-  // ✨ 캐릭터 목록 (DB의 characterSeq와 일치해야 함)
   const characters = [
     { seq: 1, name: "햄스터", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png" },
     { seq: 2, name: "여우", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png" },
@@ -18,6 +16,8 @@ function CharacterSelectPage() {
   ];
 
   const [index, setIndex] = useState(0);
+  // ✨ [추가] 캐릭터 닉네임 state
+  const [characterNickname, setCharacterNickname] = useState("");
 
   const prev = () => setIndex((prev) => (prev - 1 + characters.length) % characters.length);
   const next = () => setIndex((prev) => (prev + 1) % characters.length);
@@ -29,24 +29,33 @@ function CharacterSelectPage() {
       return;
     }
 
+    // ✨ [추가] 캐릭터 닉네임 입력 확인
+    if (!characterNickname.trim()) {
+      alert("캐릭터의 이름을 지어주세요!");
+      return;
+    }
+
     const selectedCharacter = characters[index];
 
     try {
       if (IS_TEST_MODE) {
         console.log("🛠️ [TEST] 전송 데이터:", {
-          email, password, nickname: userNickname, characterSeq: selectedCharacter.seq
+          email,
+          password,
+          nickname: userNickname,
+          characterSeq: selectedCharacter.seq,
+          characterNickname // ✨ 확인용
         });
         await new Promise(resolve => setTimeout(resolve, 1000));
         alert("[TEST] 회원가입 성공!");
         navigate("/auth/login");
       } else {
-        // 🚀 [수정 2] authApi -> authService 로 변경
-        // (이제 토큰 없는 publicApi를 통해 요청이 날아갑니다)
         await authService.signup({
           email: email,
           password: password,
           nickname: userNickname,
-          characterSeq: selectedCharacter.seq
+          characterSeq: selectedCharacter.seq,
+          characterNickname: characterNickname // ✨ [추가] API에 전달
         });
 
         alert("회원가입 완료! 로그인해주세요.");
@@ -64,8 +73,14 @@ function CharacterSelectPage() {
     <div className="min-h-[calc(100vh-150px)] flex items-center justify-center bg-white px-6">
       <div className="flex flex-col items-center text-center gap-6">
 
+        {/* 안내 문구 (옵션)
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Choose Your Partner</h2>
+          <p className="text-slate-500 mt-2">함께할 캐릭터를 선택하고 이름을 지어주세요.</p>
+        </div> */}
+
         {/* 캐릭터 이미지 슬라이더 */}
-        <div className="flex items-center justify-center gap-4 sm:gap-8 h-48">
+        <div className="flex items-center justify-center gap-4 sm:gap-8 h-48 mt-4">
           <div className="w-24 h-24 flex items-center justify-center opacity-40 grayscale blur-[1px] transition-all duration-300">
             <img src={characters[(index - 1 + characters.length) % characters.length].img} alt="prev" className="w-full h-full object-contain" />
           </div>
@@ -77,16 +92,33 @@ function CharacterSelectPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6 text-slate-700 mt-4">
+        {/* 네비게이션 버튼 & 종족 이름 */}
+        <div className="flex items-center gap-6 text-slate-700 mt-2">
           <button onClick={prev} className="text-3xl text-slate-300 hover:text-slate-500 transition-colors p-2">◀</button>
           <span className="text-xl font-bold tracking-widest uppercase min-w-[80px]">{characters[index].name}</span>
           <button onClick={next} className="text-3xl text-slate-300 hover:text-slate-500 transition-colors p-2">▶</button>
         </div>
 
+        {/* ✨ [추가] 캐릭터 닉네임 입력창 (버튼과 같은 w-80 너비) */}
+        <div className="w-80 mt-2">
+          {/* <label className="block text-sm font-bold text-slate-500 mb-2 text-left ml-1">
+            CHARACTER NICKNAME
+          </label> */}
+          <input
+            type="text"
+            value={characterNickname}
+            onChange={(e) => setCharacterNickname(e.target.value)}
+            placeholder="CHARACTER NICKNAME"
+            className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-200 
+                focus:outline-none focus:ring-2 focus:ring-primary-400 focus:bg-white 
+                transition-all text-sm text-slate-700 placeholder:text-slate-400"
+          />
+        </div>
+
         <button
           onClick={handleStart}
           className="w-80 rounded-xl bg-primary-600 py-4 text-sm font-bold text-white
-          tracking-wider hover:bg-primary-700 shadow-lg shadow-primary-200 active:scale-[0.98] transition-all mt-4"
+          tracking-wider hover:bg-primary-700 shadow-lg shadow-primary-200 active:scale-[0.98] transition-all"
         >
           COMPLETE SIGNUP
         </button>
