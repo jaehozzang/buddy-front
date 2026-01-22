@@ -4,7 +4,6 @@ import { useAuthStore } from "../store/useAuthStore";
 import { chatApi } from "../api/chatApi";
 import { diaryApi } from "../api/diaryApi";
 import { IS_TEST_MODE } from "../config";
-import { AxiosError } from "axios";
 
 // 애니메이션 스타일
 const slideUpAnimation = `
@@ -43,7 +42,8 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
     const [searchParams] = useSearchParams();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { user } = useAuthStore();
-    // ✨ [수정 1] 진짜 세션 ID를 저장할 변수 추가 (초기값 null)
+
+    // ✨ [기존 수정 유지] 진짜 세션 ID 저장
     const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
     const isMiniMode = propIsMiniMode || searchParams.get("mode") === "mini";
@@ -129,18 +129,14 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                 };
                 setMessages((prev) => [...prev, botMsg]);
             } else {
-                // 🚀 [REAL] 서버 전송
-                // ✨ [수정 2] ID가 없으면 null을 보내서 "새 방 만들어줘"라고 해야 함!
-                // (주의: chatApi.sendMessage의 타입이 number만 받게 되어있다면, any로 잠시 우회하거나 타입을 number | null로 고쳐야 합니다)
                 const requestSessionId = currentSessionId === null ? null : currentSessionId;
 
-                // @ts-ignore (타입 에러가 날 경우를 대비해 임시로 무시)
+                // @ts-ignore
                 const response = await chatApi.sendMessage({
                     sessionId: requestSessionId as any,
                     content: userText
                 });
 
-                // ✨ [수정 3] 서버가 발급해준 진짜 방 번호(sessionId) 저장!
                 if (response.result.sessionId) {
                     console.log("🎟️ 방 번호 발급됨:", response.result.sessionId);
                     setCurrentSessionId(response.result.sessionId);
@@ -156,12 +152,9 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
             }
         } catch (error) {
             console.error("채팅 전송 실패:", error);
-            const err = error as AxiosError;
-            console.log(err.response); // 에러 상세 로그 확인용
-
             const errorMsg: Message = {
                 id: Date.now() + 1,
-                text: "서버 오류가 발생했어요. (잠시 후 다시 시도해주세요)",
+                text: "서버 오류가 발생했어요.",
                 sender: "character",
                 timestamp: new Date(),
             };
@@ -172,14 +165,12 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
     };
 
     // 🚀 [API] 대화 종료 및 일기 생성
-    // 🚀 [API] 대화 종료 및 일기 생성
     const handleEndConversation = async () => {
         if (messages.length < 2) {
-            alert("일기를 쓰기엔 대화가 너무 짧아요! 조금 더 이야기해요 ☺️");
+            alert("일기를 쓰기엔 대화가 너무 짧아요!");
             return;
         }
 
-        // ✨ [수정됨] 세션 ID가 없으면 막기
         if (!currentSessionId) {
             alert("서버와 연결된 대화 내용이 없습니다.");
             return;
@@ -190,7 +181,6 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
 
         try {
             if (IS_TEST_MODE) {
-                // ... 테스트 모드 코드 (그대로 두세요) ...
                 await new Promise(r => setTimeout(r, 2000));
                 setGeneratedDiary({
                     title: "즐거운 하루",
@@ -201,15 +191,14 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                     ]
                 });
             } else {
-                // 🚀 [REAL] 일기 생성 요청
-                // ✨ [수정됨] 0 대신 currentSessionId 사용!
-                const response = await diaryApi.createDiaryFromChat(currentSessionId);
+                // ✨ [이전 수정 유지] 객체로 감싸서 요청
+                const response = await diaryApi.createDiaryFromChat({ sessionId: currentSessionId } as any);
 
                 if (response.result) {
                     setGeneratedDiary({
                         title: response.result.title,
                         content: response.result.content,
-                        tags: response.result.tags // ✨ .map() 없이 통째로 저장!
+                        tags: response.result.tags
                     });
                 }
             }
@@ -222,7 +211,7 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
         }
     };
 
-    // 🚀 [API] 최종 일기 저장
+    // 🚀 [API] 최종 일기 저장 (여기가 핵심 수정됨!)
     const handleSaveDiary = async () => {
         if (!generatedDiary) return;
 
@@ -230,15 +219,29 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
             if (IS_TEST_MODE) {
                 // ... 테스트 모드 생략 ...
             } else {
-            // ✨ [수정] 명세서에 맞춰 'tagSeqs' 대신 'tags'에 문자열 배열로 전송
-            await diaryApi.createDiary({
-                title: generatedDiary.title,
-                content: generatedDiary.content,
-                imageUrl: "", 
-                // ❌ 기존: tagSeqs: generatedDiary.tags.map(t => t.tagSeq)
-                // ✅ 변경: 태그 이름만 배열로 추출해서 보냄
-                tags: generatedDiary.tags.map(t => t.name) 
-            });
+                // ✨ [수정 Point 1] FormData 객체 생성 (Multipart 전송을 위해)
+                const formData = new FormData();
+
+                // ✨ [수정 Point 2] JSON 데이터를 만들어서 'request'라는 이름의 Blob으로 포장
+                // 명세서에 따르면 request는 object이고, 태그는 tagSeq(번호)를 리스트로 받는 것이 일반적입니다.
+                const diaryRequestData = {
+                    title: generatedDiary.title,
+                    content: generatedDiary.content,
+                    tagSeqs: generatedDiary.tags.map(t => t.tagSeq) // 번호만 추출해서 보냄
+                };
+
+                // JSON 객체를 문자열로 바꾸고, Blob(타입: application/json)으로 감싸서 'request' 키에 넣음
+                formData.append("request", new Blob([JSON.stringify(diaryRequestData)], {
+                    type: "application/json"
+                }));
+
+                // ✨ [수정 Point 3] 이미지는 없지만 명세에 있으므로, 필요하다면 빈 값을 보내거나 생략
+                // (보통 필수는 아니지만, 명세가 strict하다면 빈 파일이라도 보내야 할 수 있음. 여기선 생략)
+                // formData.append("image", file); // 파일이 있다면 여기에 추가
+
+                // ✨ [수정 Point 4] FormData를 그대로 API에 전달
+                // (diaryApi.createDiary 함수의 인자 타입을 무시하기 위해 as any 사용)
+                await diaryApi.createDiary(formData as any);
             }
 
             alert("일기가 캘린더에 저장되었습니다! 📅");
@@ -246,7 +249,6 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
             if (isMiniMode) {
                 window.close();
             } else {
-                // 저장 후 캘린더로 이동하면, 캘린더가 자동으로 새 데이터를 불러옵니다.
                 navigate("/app/calendar");
             }
 
@@ -260,7 +262,7 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
         <>
             <style>{slideUpAnimation}</style>
             <div className={`flex flex-col relative bg-slate-50 ${containerStyleClass}`}>
-                {/* 헤더 */}
+                {/* ... 헤더 및 채팅 영역 (기존 코드와 동일) ... */}
                 <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 sticky top-0 z-10">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 overflow-hidden">
@@ -282,7 +284,6 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                     </button>
                 </div>
 
-                {/* 채팅 내용 */}
                 <div className={`flex-1 overflow-y-auto p-6 custom-scrollbar ${isMiniMode ? 'pt-4' : ''}`}>
                     <div className="max-w-4xl mx-auto space-y-6">
                         {messages.map((msg) => {
@@ -321,7 +322,6 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                                 </div>
                             );
                         })}
-
                         {/* 입력 중 표시 */}
                         {isTyping && (
                             <div className="flex justify-start items-end gap-3 animate-pulse">
@@ -337,7 +337,6 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                     </div>
                 </div>
 
-                {/* 입력창 */}
                 <div className="flex-shrink-0 p-4 bg-white border-t border-gray-100">
                     <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-2">
                         <input
@@ -362,11 +361,10 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                     </form>
                 </div>
 
-                {/* 모달 유지 */}
+                {/* 모달 */}
                 {showDiaryModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-[fade-in_0.3s_ease-out] max-h-[90vh] overflow-y-auto">
-                            {/* ... 모달 내용은 그대로 ... */}
                             <div className="bg-primary-600 p-6 text-white text-center relative">
                                 <h3 className="text-lg font-bold tracking-widest">DIARY PREVIEW</h3>
                                 <p className="text-primary-100 text-xs mt-1">오늘의 대화가 일기로 변신했어요!</p>
