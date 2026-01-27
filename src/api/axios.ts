@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 // 1. 공통 설정 (URL, 타임아웃, Ngrok 무시 헤더 등)
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://3.25.139.83:8080';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://buddy-api.kro.kr';
 
 const commonConfig = {
   baseURL: BASE_URL,
