@@ -1,7 +1,7 @@
 // src/api/diaryApi.ts
 import { authApi } from './axios';
 import type { AuthResponse } from '../types/auth';
-import type { DiarySummary, DiaryDetail, CreateDiaryRequest } from '../types/diary';
+import type { DiarySummary, DiaryDetail } from '../types/diary';
 
 export const diaryApi = {
     // 1. 목록 조회
@@ -30,9 +30,13 @@ export const diaryApi = {
         return response.data;
     },
 
-    // 4. 일기 수정
-    updateDiary: async (diarySeq: number, data: CreateDiaryRequest) => {
-        const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data);
+    // 4. 일기 수정 (PATCH)
+    updateDiary: async (diarySeq: number, data: FormData) => {
+        const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
         return response.data;
     },
 

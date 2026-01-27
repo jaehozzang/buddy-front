@@ -104,39 +104,60 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !content.trim()) {
-      alert("제목과 내용을 모두 입력해주세요!");
-      return;
-    }
-    const requestData = {
-      title: title,
-      content: content,
-      imageUrl: images[0] || "",
-      tags: tags,
-      date: targetDate,
-    };
-    try {
-      if (IS_TEST_MODE) {
-        console.log("[TEST] 저장 데이터:", requestData);
-        await new Promise(r => setTimeout(r, 500));
-        alert(mode === "edit" ? "일기 수정 완료 (테스트)" : "일기 저장 완료 (테스트)");
-        navigate("/app/calendar");
-      } else {
-        if (mode === "edit" && id) {
-          await diaryApi.updateDiary(Number(id), requestData);
-          alert("일기가 수정되었습니다!");
-        } else {
-          await diaryApi.createDiary(requestData);
-          alert("일기가 등록되었습니다!");
-        }
-        navigate("/app/calendar");
+  if (!title.trim() || !content.trim()) {
+    alert("제목과 내용을 모두 입력해주세요!");
+    return;
+  }
+
+  try {
+    if (IS_TEST_MODE) {
+      const requestData = { title, content, imageUrl: images[0] || "", tags, date: targetDate };
+      console.log("[TEST] 저장 데이터:", requestData);
+      await new Promise(r => setTimeout(r, 500));
+      alert(mode === "edit" ? "일기 수정 완료 (테스트)" : "일기 저장 완료 (테스트)");
+      navigate("/app/calendar");
+    } else {
+      // 1. FormData 생성
+      const formData = new FormData();
+
+      // 2. API 명세서에 따른 JSON 데이터 구성 (request 필드)
+      // 보통 multipart 전송 시 JSON 데이터는 Blob 형태로 넘기기도 합니다.
+      const diaryRequest = {
+        title: title,
+        content: content,
+        tags: tags,
+        date: targetDate, // API에서 요구하는 날짜 형식이 string($date)이므로 그대로 사용
+      };
+
+      // 3. 필드 추가 (서버 설정에 따라 'request'라는 키에 JSON 문자열을 넣습니다)
+      formData.append(
+        "request",
+        new Blob([JSON.stringify(diaryRequest)], { type: "application/json" })
+      );
+
+      // 4. 이미지 추가 (현재 images 배열에는 Base64가 들어있으므로 파일로 변환이 필요할 수 있습니다)
+      // 만약 input type="file"에서 가져온 File 객체를 직접 들고 있다면 그 객체를 바로 넣으세요.
+      if (fileInputRef.current?.files?.[0]) {
+        formData.append("image", fileInputRef.current.files[0]);
       }
-    } catch (error) {
-      console.error("저장 실패", error);
-      const err = error as AxiosError<{ message: string }>;
-      alert(err.response?.data?.message || "저장에 실패했습니다.");
+
+      if (mode === "edit" && id) {
+        // PATCH 요청 (일기 수정)
+        await diaryApi.updateDiary(Number(id), formData);
+        alert("일기가 수정되었습니다!");
+      } else {
+        // POST 요청 (일기 생성)
+        await diaryApi.createDiary(formData);
+        alert("일기가 등록되었습니다!");
+      }
+      navigate("/app/calendar");
     }
-  };
+  } catch (error) {
+    console.error("저장 실패", error);
+    const err = error as AxiosError<{ message: string }>;
+    alert(err.response?.data?.message || "저장에 실패했습니다.");
+  }
+};
 
   // --- ✨ UI 렌더링 시작 (여기가 바뀌었습니다) ---
   return (
