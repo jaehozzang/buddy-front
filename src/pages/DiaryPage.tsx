@@ -24,12 +24,39 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- 데이터 불러오기 및 핸들러 로직 (기존과 동일) ---
+  // --- 데이터 불러오기 및 핸들러 로직 ---
   useEffect(() => {
+    // 1. 수정 모드일 때
     if (mode === "edit" && id) {
       fetchDiaryDetail(Number(id));
     }
-  }, [mode, id]);
+    // 2. ✨ [수정됨] 생성 모드이고 채팅방에서 넘어온 sessionId가 있을 때 AI 일기 생성 요청
+    else if (mode === "create" && location.state?.sessionId) {
+      fetchAIDiary(location.state.sessionId);
+    }
+  }, [mode, id, location.state]);
+
+  // ✨ [추가됨] AI 일기 초안 가져오기
+  const fetchAIDiary = async (sessionId: number) => {
+    try {
+      // 중요: 객체가 아닌 숫자(sessionId)만 전달합니다.
+      const response = await diaryApi.createDiaryFromChat(sessionId);
+
+      if (response.result) {
+        const d = response.result;
+        setTitle(d.title);
+        setContent(d.content);
+
+        // 태그 처리 (서버 응답에 따라 문자열 또는 객체 처리)
+        if (d.tags) {
+          setTags(d.tags.map((t: any) => (typeof t === "string" ? t : t.name)));
+        }
+      }
+    } catch (error) {
+      console.error("AI 일기 생성 실패", error);
+      alert("AI 일기 초안을 불러오지 못했습니다.");
+    }
+  };
 
   const fetchDiaryDetail = async (diarySeq: number) => {
     try {
@@ -124,21 +151,15 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         };
 
         // 2. ✨ 핵심: 'request'라는 이름으로 JSON을 Blob 형태로 추가
-        // 명세서에 request* (object)라고 되어 있는 부분을 맞추는 과정입니다.
         formData.append(
           "request",
           new Blob([JSON.stringify(diaryData)], { type: "application/json" })
         );
 
         // 3. 'image'라는 이름으로 파일 추가
-        // fileInputRef에 담긴 실제 File 객체를 가져옵니다.
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
-        } else {
-          // 이미지가 없을 때 서버가 에러를 낸다면 빈 파일을 보내거나, 
-          // 아예 안 보내는 등 서버 스펙에 맞춰야 합니다. 
-          // 일단은 파일이 있을 때만 추가해 보겠습니다.
         }
 
         // 4. 전송
@@ -153,20 +174,17 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       }
     } catch (error) {
       console.error("저장 실패 상세 내역:", error);
-      // 에러 발생 시 서버가 보내준 구체적인 메시지를 확인하기 위해:
       const err = error as AxiosError<{ message: string }>;
-      alert(err.response?.data?.message || "저장에 실패했습니다. 개발자 도구 콘솔을 확인해주세요.");
+      alert(err.response?.data?.message || "저장에 실패했습니다.");
     }
   };
 
-  // --- ✨ UI 렌더링 시작 (여기가 바뀌었습니다) ---
+  // --- UI 렌더링 ---
   return (
-    // [변경 포인트] 캘린더 페이지와 똑같은 "카드형 컨테이너" 스타일 적용
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
 
       {/* 헤더 */}
       <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
-        {/* 1. 뒤로가기 버튼 */}
         <button
           onClick={() => navigate(-1)}
           className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
@@ -174,7 +192,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           ←
         </button>
 
-        {/* 2. 날짜 선택기 (중앙) */}
         <input
           type="date"
           value={targetDate}
@@ -182,20 +199,17 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer text-center hover:bg-slate-50 px-2 py-1 rounded transition"
         />
 
-        {/* 3. ✨ [변경] 삭제 버튼 (오른쪽 상단) */}
         {mode === 'edit' ? (
           <button
             onClick={handleDelete}
             className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
             title="삭제하기"
           >
-            {/* 휴지통 SVG 아이콘 */}
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
           </button>
         ) : (
-          // 생성 모드일 때는 균형을 맞추기 위한 빈 박스 유지
           <div className="w-8" />
         )}
       </div>
@@ -229,7 +243,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
               </span>
             ))}
 
-            {/* 태그 입력창을 태그들 뒤에 자연스럽게 배치 */}
             <input
               type="text"
               value={inputTag}
@@ -263,7 +276,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
             />
           </div>
 
-          {/* 이미지 미리보기 */}
           {images.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
               {images.map((imgSrc, idx) => (
@@ -292,8 +304,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
       {/* 하단 버튼 영역 */}
       <div className="p-4 bg-white border-t border-slate-100 flex-shrink-0">
-        {/* ✨ 삭제 버튼 코드 제거함 */}
-
         <button
           onClick={handleSave}
           className="w-full bg-primary-600 text-white py-3 rounded-xl font-bold text-lg 
