@@ -97,7 +97,7 @@ export default function Header() {
             <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
 
                 <Link to="/app/home" className="flex items-center gap-2 group">
-                    <span className="text-2xl transition-transform group-hover:scale-110">🍀</span>
+                    {/* <span className="text-2xl transition-transform group-hover:scale-110">🍀</span> */}
                     <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                         My <span className="text-primary-600">Buddy</span>
                     </h1>

@@ -13,7 +13,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const location = useLocation();
   const { id } = useParams();
 
-  // CalendarPage에서 넘겨준 날짜 (없으면 오늘)
+  // CalendarPage 또는 ChatPage에서 넘겨준 날짜 (없으면 오늘)
   const { date } = location.state || {};
 
   const [targetDate, setTargetDate] = useState(date || new Date().toISOString().split("T")[0]);
@@ -24,41 +24,30 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- 데이터 불러오기 및 핸들러 로직 ---
+  // --- 데이터 불러오기 로직 ---
   useEffect(() => {
-    // 1. 수정 모드일 때
+    // 1. 수정 모드일 때 (기존 일기 조회)
     if (mode === "edit" && id) {
       fetchDiaryDetail(Number(id));
     }
-    // 2. ✨ [수정됨] 생성 모드이고 채팅방에서 넘어온 sessionId가 있을 때 AI 일기 생성 요청
+    // 2. ✨ [생성 모드] 채팅방에서 넘어온 sessionId가 있을 때 (AI 일기 생성)
     else if (mode === "create" && location.state?.sessionId) {
       fetchAIDiary(location.state.sessionId);
     }
   }, [mode, id, location.state]);
 
-  // ✨ [추가됨] AI 일기 초안 가져오기
-  // DiaryPage.tsx 내부의 fetchAIDiary 함수 교체
-
-  const fetchAIDiary = async (param: any) => {
+  // ✨ AI 일기 초안 가져오기
+  const fetchAIDiary = async (sessionId: number) => {
     try {
-      // 🔍 [안전장치 추가] 
-      // 만약 param이 객체이고 그 안에 sessionId가 또 있다면 꺼내서 쓴다.
-      // (예: { sessionId: 5 } -> 5)
-      const realSessionId = (typeof param === 'object' && param.sessionId)
-        ? param.sessionId
-        : param;
-
-      // 숫자가 맞는지 확인 (디버깅용 로그)
-      console.log("최종 전송할 ID:", realSessionId);
-
-      // 이제 진짜 숫자만 api로 전달됩니다.
-      const response = await diaryApi.createDiaryFromChat(Number(realSessionId));
+      // ChatPage에서 깔끔하게 숫자만 보냈으므로 그대로 호출
+      const response = await diaryApi.createDiaryFromChat(sessionId);
 
       if (response.result) {
         const d = response.result;
         setTitle(d.title);
         setContent(d.content);
 
+        // 태그 처리 (객체 배열이면 이름만 추출)
         if (d.tags) {
           setTags(d.tags.map((t: any) => (typeof t === "string" ? t : t.name)));
         }
@@ -149,25 +138,25 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
     try {
       if (IS_TEST_MODE) {
-        // 테스트 모드 로직 생략...
+        // 테스트 모드 생략
       } else {
         const formData = new FormData();
 
-        // 1. 서버가 요구하는 JSON 데이터 구조 만들기
+        // 1. JSON 데이터 구조 만들기
         const diaryData = {
           title: title,
           content: content,
-          tags: tags, // 태그 배열
-          date: targetDate, // "2026-01-28" 형태의 문자열
+          tags: tags,
+          date: targetDate,
         };
 
-        // 2. ✨ 핵심: 'request'라는 이름으로 JSON을 Blob 형태로 추가
+        // 2. 'request' 키에 JSON을 Blob으로 변환해서 넣기 (핵심)
         formData.append(
           "request",
           new Blob([JSON.stringify(diaryData)], { type: "application/json" })
         );
 
-        // 3. 'image'라는 이름으로 파일 추가
+        // 3. 'image' 키에 파일 넣기
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
@@ -190,10 +179,8 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
-  // --- UI 렌더링 ---
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-
       {/* 헤더 */}
       <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
         <button
@@ -227,8 +214,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
       {/* 스크롤 영역 */}
       <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-
-        {/* 1. 제목 입력 */}
+        {/* 제목 입력 */}
         <section>
           <input
             type="text"
@@ -239,13 +225,12 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           />
         </section>
 
-        {/* 2. 태그 입력 */}
+        {/* 태그 입력 */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm font-bold text-slate-500">태그</span>
             <span className="text-[10px] text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded">Enter로 추가</span>
           </div>
-
           <div className="flex flex-wrap gap-2 mb-3">
             {tags.map((tag) => (
               <span key={tag} className="bg-primary-50 text-primary-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">
@@ -253,7 +238,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
                 <button onClick={() => removeTag(tag)} className="hover:text-primary-900 text-lg leading-3">×</button>
               </span>
             ))}
-
             <input
               type="text"
               value={inputTag}
@@ -265,7 +249,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           </div>
         </section>
 
-        {/* 3. 내용 및 사진 */}
+        {/* 내용 및 사진 */}
         <section className="flex-1 flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-bold text-slate-500">오늘의 이야기</h3>
@@ -277,7 +261,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
                 📷 사진 추가
               </button>
             </div>
-
             <input
               type="file"
               accept="image/*"
