@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { diaryApi } from "../api/diaryApi";
-import { AxiosError } from "axios";
 import { IS_TEST_MODE } from "../config";
 
 interface DiaryPageProps {
