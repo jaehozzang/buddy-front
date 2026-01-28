@@ -104,60 +104,60 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   const handleSave = async () => {
-  if (!title.trim() || !content.trim()) {
-    alert("제목과 내용을 모두 입력해주세요!");
-    return;
-  }
-
-  try {
-    if (IS_TEST_MODE) {
-      const requestData = { title, content, imageUrl: images[0] || "", tags, date: targetDate };
-      console.log("[TEST] 저장 데이터:", requestData);
-      await new Promise(r => setTimeout(r, 500));
-      alert(mode === "edit" ? "일기 수정 완료 (테스트)" : "일기 저장 완료 (테스트)");
-      navigate("/app/calendar");
-    } else {
-      // 1. FormData 생성
-      const formData = new FormData();
-
-      // 2. API 명세서에 따른 JSON 데이터 구성 (request 필드)
-      // 보통 multipart 전송 시 JSON 데이터는 Blob 형태로 넘기기도 합니다.
-      const diaryRequest = {
-        title: title,
-        content: content,
-        tags: tags,
-        date: targetDate, // API에서 요구하는 날짜 형식이 string($date)이므로 그대로 사용
-      };
-
-      // 3. 필드 추가 (서버 설정에 따라 'request'라는 키에 JSON 문자열을 넣습니다)
-      formData.append(
-        "request",
-        new Blob([JSON.stringify(diaryRequest)], { type: "application/json" })
-      );
-
-      // 4. 이미지 추가 (현재 images 배열에는 Base64가 들어있으므로 파일로 변환이 필요할 수 있습니다)
-      // 만약 input type="file"에서 가져온 File 객체를 직접 들고 있다면 그 객체를 바로 넣으세요.
-      if (fileInputRef.current?.files?.[0]) {
-        formData.append("image", fileInputRef.current.files[0]);
-      }
-
-      if (mode === "edit" && id) {
-        // PATCH 요청 (일기 수정)
-        await diaryApi.updateDiary(Number(id), formData);
-        alert("일기가 수정되었습니다!");
-      } else {
-        // POST 요청 (일기 생성)
-        await diaryApi.createDiary(formData);
-        alert("일기가 등록되었습니다!");
-      }
-      navigate("/app/calendar");
+    if (!title.trim() || !content.trim()) {
+      alert("제목과 내용을 모두 입력해주세요!");
+      return;
     }
-  } catch (error) {
-    console.error("저장 실패", error);
-    const err = error as AxiosError<{ message: string }>;
-    alert(err.response?.data?.message || "저장에 실패했습니다.");
-  }
-};
+
+    try {
+      if (IS_TEST_MODE) {
+        // 테스트 모드 로직 생략...
+      } else {
+        const formData = new FormData();
+
+        // 1. 서버가 요구하는 JSON 데이터 구조 만들기
+        const diaryData = {
+          title: title,
+          content: content,
+          tags: tags, // 태그 배열
+          date: targetDate, // "2026-01-28" 형태의 문자열
+        };
+
+        // 2. ✨ 핵심: 'request'라는 이름으로 JSON을 Blob 형태로 추가
+        // 명세서에 request* (object)라고 되어 있는 부분을 맞추는 과정입니다.
+        formData.append(
+          "request",
+          new Blob([JSON.stringify(diaryData)], { type: "application/json" })
+        );
+
+        // 3. 'image'라는 이름으로 파일 추가
+        // fileInputRef에 담긴 실제 File 객체를 가져옵니다.
+        const file = fileInputRef.current?.files?.[0];
+        if (file) {
+          formData.append("image", file);
+        } else {
+          // 이미지가 없을 때 서버가 에러를 낸다면 빈 파일을 보내거나, 
+          // 아예 안 보내는 등 서버 스펙에 맞춰야 합니다. 
+          // 일단은 파일이 있을 때만 추가해 보겠습니다.
+        }
+
+        // 4. 전송
+        if (mode === "edit" && id) {
+          await diaryApi.updateDiary(Number(id), formData);
+          alert("일기가 수정되었습니다!");
+        } else {
+          await diaryApi.createDiary(formData);
+          alert("일기가 등록되었습니다!");
+        }
+        navigate("/app/calendar");
+      }
+    } catch (error) {
+      console.error("저장 실패 상세 내역:", error);
+      // 에러 발생 시 서버가 보내준 구체적인 메시지를 확인하기 위해:
+      const err = error as AxiosError<{ message: string }>;
+      alert(err.response?.data?.message || "저장에 실패했습니다. 개발자 도구 콘솔을 확인해주세요.");
+    }
+  };
 
   // --- ✨ UI 렌더링 시작 (여기가 바뀌었습니다) ---
   return (
