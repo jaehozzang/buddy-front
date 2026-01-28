@@ -18,25 +18,23 @@ export const diaryApi = {
         return response.data;
     },
 
-    // 3. 일기 생성 (✨ 수정됨: FormData 전송을 위한 헤더 설정 추가)
+    // 3. 일기 생성
     createDiary: async (data: FormData) => {
-        // 주의: data의 타입은 기존 CreateDiaryRequest(객체)가 아니라 FormData여야 합니다.
-        const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data, {
-            headers: {
-                // 브라우저가 boundary를 자동으로 설정하도록 Content-Type을 multipart/form-data로 명시
-                "Content-Type": "multipart/form-data",
-            },
+        // ❌ [삭제] headers 설정을 지우세요! Axios가 알아서 설정합니다.
+        /* const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data, {
+            headers: { "Content-Type": "multipart/form-data" }, 
         });
+        */
+
+        // ✅ [수정] 그냥 data만 넘기세요.
+        const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data);
         return response.data;
     },
 
-    // 4. 일기 수정 (PATCH)
+    // 4. 일기 수정
     updateDiary: async (diarySeq: number, data: FormData) => {
-        const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+        // ❌ [삭제] 여기도 headers 설정 삭제
+        const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data);
         return response.data;
     },
 

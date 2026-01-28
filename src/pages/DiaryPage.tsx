@@ -170,6 +170,9 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
+        } else {
+          // ✨ [추가됨] 이미지가 없어도 빈 파일을 보내서 에러 방지
+          formData.append("image", new File([], "", { type: "application/octet-stream" }));
         }
 
         // 5. API 호출
