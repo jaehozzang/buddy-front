@@ -60,7 +60,7 @@ export default function Header() {
             <header className="h-[72px] bg-white border-b border-slate-200 sticky top-0 z-50 bg-white/80 backdrop-blur-md">
                 <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
-                        <span className="text-2xl transition-transform group-hover:scale-110">🍀</span>
+                        {/* <span className="text-2xl transition-transform group-hover:scale-110">🍀</span> */}
                         <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                             My <span className="text-primary-600">Buddy</span>
                         </h1>

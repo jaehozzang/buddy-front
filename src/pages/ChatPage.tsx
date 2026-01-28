@@ -161,7 +161,7 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
 
         // ✨ 중요: 여기서 객체가 아닌 '숫자'만 보냅니다.
         // 모달을 띄우는 대신 일기 작성 페이지로 이동합니다.
-        navigate("/diary", {
+        navigate("/app/diary/new", {
             state: {
                 sessionId: currentSessionId, // 숫자 ID (예: 6)
                 date: new Date().toISOString().split("T")[0] // 오늘 날짜
