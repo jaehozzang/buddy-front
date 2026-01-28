@@ -143,35 +143,37 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
     try {
       if (IS_TEST_MODE) {
-        // 테스트 모드 생략
+        // ...
       } else {
         const formData = new FormData();
 
-        // 2. ✨ [핵심 수정] 필드명을 Swagger와 똑같이 'diaryDate'로 변경
         const diaryData = {
           title: title,
           content: content,
           tags: tags,
-          diaryDate: targetDate, // 👈 여기가 범인이었습니다!
+          diaryDate: targetDate,
         };
 
-        console.log("📦 전송 데이터:", diaryData); // 확인용 로그
+        console.log("📦 전송 데이터:", diaryData);
 
-        // 3. 'request' 키에 JSON을 Blob으로 포장 (application/json 타입 명시)
-        formData.append(
-          "request",
-          new Blob([JSON.stringify(diaryData)], { type: "application/json" })
-        );
+        // 🚨 [여기를 수정하세요!] 🚨
+        // 기존: Blob으로 감싸서 보냄 (Spring @RequestPart 엄격 모드용)
+        // formData.append("request", new Blob([JSON.stringify(diaryData)], { type: "application/json" }));
 
-        // 4. 이미지 파일 추가 (파일이 있을 때만 보냄)
+        // ✨ [수정 후]: Swagger처럼 그냥 '문자열'로 보냅니다.
+        formData.append("request", JSON.stringify(diaryData));
+
+        // 이미지 처리
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
         }
+        // ⚠️ 혹시 이미지가 없으면 에러가 난다면, 아래 주석을 풀어보세요.
+        // else {
+        //     formData.append("image", new File([], "empty.jpg", { type: "image/jpeg" }));
+        // }
 
-        // 5. API 호출
         if (mode === "edit" && id) {
-          // 수정 API도 명세서에 따라 필드명이 같다면 수정될 것입니다.
           await diaryApi.updateDiary(Number(id), formData);
           alert("일기가 수정되었습니다!");
         } else {
@@ -182,11 +184,11 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       }
     } catch (error) {
       console.error("저장 실패:", error);
-      const err = error as AxiosError<{ message: string }>;
-      alert(err.response?.data?.message || "저장에 실패했습니다. (서버 에러)");
+      // 에러 내용을 화면에 뿌려봅니다.
+      const err = error as any;
+      alert(`저장 실패: ${err.response?.status} ${err.response?.statusText}`);
     }
   };
-
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       {/* 헤더 */}
