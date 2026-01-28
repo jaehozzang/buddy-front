@@ -131,15 +131,13 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   const handleSave = async () => {
-    // 1. 유효성 검사 (제목, 내용, 날짜)
+    // 1. 유효성 검사
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 모두 입력해주세요!");
       return;
     }
-
-    // ✨ [추가된 안전장치] 날짜가 비어있으면 오늘 날짜로 강제 설정하거나 경고
     if (!targetDate) {
-      alert("날짜가 선택되지 않았습니다. 날짜를 확인해주세요.");
+      alert("날짜가 선택되지 않았습니다.");
       return;
     }
 
@@ -149,34 +147,31 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       } else {
         const formData = new FormData();
 
-        // 2. 서버로 보낼 JSON 데이터 구성
+        // 2. ✨ [핵심 수정] 필드명을 Swagger와 똑같이 'diaryDate'로 변경
         const diaryData = {
           title: title,
           content: content,
           tags: tags,
-          date: targetDate, // "2026-01-28" 형식의 문자열이어야 합니다.
+          diaryDate: targetDate, // 👈 여기가 범인이었습니다!
         };
 
-        // (디버깅용) 실제로 전송되는 날짜를 콘솔에서 확인해보세요!
-        console.log("📅 전송하는 날짜:", diaryData.date);
+        console.log("📦 전송 데이터:", diaryData); // 확인용 로그
 
-        // 3. 'request' 키에 JSON을 Blob으로 변환해서 넣기
+        // 3. 'request' 키에 JSON을 Blob으로 포장 (application/json 타입 명시)
         formData.append(
           "request",
           new Blob([JSON.stringify(diaryData)], { type: "application/json" })
         );
 
-        // 4. 이미지 파일 추가
+        // 4. 이미지 파일 추가 (파일이 있을 때만 보냄)
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
-        } else {
-          // ✨ [추가됨] 이미지가 없어도 빈 파일을 보내서 에러 방지
-          formData.append("image", new File([], "", { type: "application/octet-stream" }));
         }
 
         // 5. API 호출
         if (mode === "edit" && id) {
+          // 수정 API도 명세서에 따라 필드명이 같다면 수정될 것입니다.
           await diaryApi.updateDiary(Number(id), formData);
           alert("일기가 수정되었습니다!");
         } else {
@@ -186,10 +181,9 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         navigate("/app/calendar");
       }
     } catch (error) {
-      console.error("저장 실패 상세 내역:", error);
+      console.error("저장 실패:", error);
       const err = error as AxiosError<{ message: string }>;
-      // 서버가 보내주는 에러 메시지 띄우기 (예: "날짜를 입력해주세요")
-      alert(err.response?.data?.message || "저장에 실패했습니다.");
+      alert(err.response?.data?.message || "저장에 실패했습니다. (서버 에러)");
     }
   };
 
