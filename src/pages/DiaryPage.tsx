@@ -37,17 +37,28 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   }, [mode, id, location.state]);
 
   // ✨ [추가됨] AI 일기 초안 가져오기
-  const fetchAIDiary = async (sessionId: number) => {
+  // DiaryPage.tsx 내부의 fetchAIDiary 함수 교체
+
+  const fetchAIDiary = async (param: any) => {
     try {
-      // 중요: 객체가 아닌 숫자(sessionId)만 전달합니다.
-      const response = await diaryApi.createDiaryFromChat(sessionId);
+      // 🔍 [안전장치 추가] 
+      // 만약 param이 객체이고 그 안에 sessionId가 또 있다면 꺼내서 쓴다.
+      // (예: { sessionId: 5 } -> 5)
+      const realSessionId = (typeof param === 'object' && param.sessionId)
+        ? param.sessionId
+        : param;
+
+      // 숫자가 맞는지 확인 (디버깅용 로그)
+      console.log("최종 전송할 ID:", realSessionId);
+
+      // 이제 진짜 숫자만 api로 전달됩니다.
+      const response = await diaryApi.createDiaryFromChat(Number(realSessionId));
 
       if (response.result) {
         const d = response.result;
         setTitle(d.title);
         setContent(d.content);
 
-        // 태그 처리 (서버 응답에 따라 문자열 또는 객체 처리)
         if (d.tags) {
           setTags(d.tags.map((t: any) => (typeof t === "string" ? t : t.name)));
         }
