@@ -146,9 +146,11 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       if (IS_TEST_MODE) {
         // 테스트 모드 로직...
       } else {
+        // DiaryPage.tsx -> handleSave 내부
+
+        // ...
         const formData = new FormData();
 
-        // 2. 데이터 구성 (필드명 diaryDate 확인 필수!)
         const diaryData = {
           title: title,
           content: content,
@@ -156,20 +158,15 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           diaryDate: targetDate,
         };
 
-        console.log("📦 전송 데이터(JSON):", diaryData);
-
-        // 🚨 [핵심 변경] Blob을 버리고, Swagger처럼 '문자열'로 보냅니다.
-        // 서버가 Blob(application/json)을 못 읽고 500 에러를 낼 때 쓰는 해결책입니다.
+        // ✨ Swagger처럼 문자열로 보냅니다. (Blob 아님!)
         formData.append("request", JSON.stringify(diaryData));
 
-        // 3. 이미지 파일 추가
+        // 이미지 추가
         const file = fileInputRef.current?.files?.[0];
         if (file) {
-          // 이미지가 있으면 보냄 (Swagger에서도 이미지 넣어서 성공했으므로)
           formData.append("image", file);
-          console.log("📷 이미지 파일 포함됨:", file.name);
         }
-        // 이미지가 없으면 아예 image 필드를 안 보냅니다. (서버가 알아서 null 처리하길 기대)
+        // ...
 
         // 4. 전송
         if (mode === "edit" && id) {
