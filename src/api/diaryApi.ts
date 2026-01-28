@@ -18,23 +18,26 @@ export const diaryApi = {
         return response.data;
     },
 
-    // 3. 일기 생성
+    // 3. 일기 생성 (✨ 수정됨)
     createDiary: async (data: FormData) => {
-        // ❌ [삭제] headers 설정을 지우세요! Axios가 알아서 설정합니다.
-        /* const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data, {
-            headers: { "Content-Type": "multipart/form-data" }, 
+        // 'Content-Type': undefined로 설정하면, 
+        // axios.ts에 있는 'application/json' 설정을 무시하고
+        // 브라우저가 자동으로 'multipart/form-data; boundary=...'를 채워줍니다.
+        const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data, {
+            headers: {
+                "Content-Type": undefined
+            }
         });
-        */
-
-        // ✅ [수정] 그냥 data만 넘기세요.
-        const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data);
         return response.data;
     },
 
-    // 4. 일기 수정
+    // 4. 일기 수정 (✨ 수정됨)
     updateDiary: async (diarySeq: number, data: FormData) => {
-        // ❌ [삭제] 여기도 headers 설정 삭제
-        const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data);
+        const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data, {
+            headers: {
+                "Content-Type": undefined
+            }
+        });
         return response.data;
     },
 
