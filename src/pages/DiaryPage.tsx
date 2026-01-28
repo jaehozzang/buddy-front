@@ -129,6 +129,8 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
+  // src/pages/DiaryPage.tsx - handleSave 함수 교체
+
   const handleSave = async () => {
     // 1. 유효성 검사
     if (!title.trim() || !content.trim()) {
@@ -142,10 +144,11 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
     try {
       if (IS_TEST_MODE) {
-        // ...
+        // 테스트 모드 로직...
       } else {
         const formData = new FormData();
 
+        // 2. 데이터 구성 (필드명 diaryDate 확인 필수!)
         const diaryData = {
           title: title,
           content: content,
@@ -153,25 +156,22 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           diaryDate: targetDate,
         };
 
-        console.log("📦 전송 데이터:", diaryData);
+        console.log("📦 전송 데이터(JSON):", diaryData);
 
-        // 🚨 [여기를 수정하세요!] 🚨
-        // 기존: Blob으로 감싸서 보냄 (Spring @RequestPart 엄격 모드용)
-        // formData.append("request", new Blob([JSON.stringify(diaryData)], { type: "application/json" }));
-
-        // ✨ [수정 후]: Swagger처럼 그냥 '문자열'로 보냅니다.
+        // 🚨 [핵심 변경] Blob을 버리고, Swagger처럼 '문자열'로 보냅니다.
+        // 서버가 Blob(application/json)을 못 읽고 500 에러를 낼 때 쓰는 해결책입니다.
         formData.append("request", JSON.stringify(diaryData));
 
-        // 이미지 처리
+        // 3. 이미지 파일 추가
         const file = fileInputRef.current?.files?.[0];
         if (file) {
+          // 이미지가 있으면 보냄 (Swagger에서도 이미지 넣어서 성공했으므로)
           formData.append("image", file);
+          console.log("📷 이미지 파일 포함됨:", file.name);
         }
-        // ⚠️ 혹시 이미지가 없으면 에러가 난다면, 아래 주석을 풀어보세요.
-        // else {
-        //     formData.append("image", new File([], "empty.jpg", { type: "image/jpeg" }));
-        // }
+        // 이미지가 없으면 아예 image 필드를 안 보냅니다. (서버가 알아서 null 처리하길 기대)
 
+        // 4. 전송
         if (mode === "edit" && id) {
           await diaryApi.updateDiary(Number(id), formData);
           alert("일기가 수정되었습니다!");
@@ -183,11 +183,22 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       }
     } catch (error) {
       console.error("저장 실패:", error);
-      // 에러 내용을 화면에 뿌려봅니다.
+
+      // 에러 상세 정보 확인
       const err = error as any;
-      alert(`저장 실패: ${err.response?.status} ${err.response?.statusText}`);
+      const status = err.response?.status;
+      const errMsg = err.response?.data?.message || "알 수 없는 서버 에러";
+
+      if (status === 500) {
+        alert(`[500 에러] 서버가 데이터를 처리하지 못했습니다.\nJSON 문자열 방식도 실패했다면 서버 로그 확인이 필요합니다.`);
+      } else if (status === 400) {
+        alert(`[400 에러] 요청 형식이 잘못되었습니다.\n메시지: ${errMsg}`);
+      } else {
+        alert(`저장 실패: ${status}\n${errMsg}`);
+      }
     }
   };
+
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       {/* 헤더 */}
