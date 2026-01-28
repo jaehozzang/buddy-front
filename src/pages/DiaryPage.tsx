@@ -131,8 +131,15 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   const handleSave = async () => {
+    // 1. 유효성 검사 (제목, 내용, 날짜)
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 모두 입력해주세요!");
+      return;
+    }
+
+    // ✨ [추가된 안전장치] 날짜가 비어있으면 오늘 날짜로 강제 설정하거나 경고
+    if (!targetDate) {
+      alert("날짜가 선택되지 않았습니다. 날짜를 확인해주세요.");
       return;
     }
 
@@ -142,27 +149,30 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       } else {
         const formData = new FormData();
 
-        // 1. JSON 데이터 구조 만들기
+        // 2. 서버로 보낼 JSON 데이터 구성
         const diaryData = {
           title: title,
           content: content,
           tags: tags,
-          date: targetDate,
+          date: targetDate, // "2026-01-28" 형식의 문자열이어야 합니다.
         };
 
-        // 2. 'request' 키에 JSON을 Blob으로 변환해서 넣기 (핵심)
+        // (디버깅용) 실제로 전송되는 날짜를 콘솔에서 확인해보세요!
+        console.log("📅 전송하는 날짜:", diaryData.date);
+
+        // 3. 'request' 키에 JSON을 Blob으로 변환해서 넣기
         formData.append(
           "request",
           new Blob([JSON.stringify(diaryData)], { type: "application/json" })
         );
 
-        // 3. 'image' 키에 파일 넣기
+        // 4. 이미지 파일 추가
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
         }
 
-        // 4. 전송
+        // 5. API 호출
         if (mode === "edit" && id) {
           await diaryApi.updateDiary(Number(id), formData);
           alert("일기가 수정되었습니다!");
@@ -175,6 +185,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     } catch (error) {
       console.error("저장 실패 상세 내역:", error);
       const err = error as AxiosError<{ message: string }>;
+      // 서버가 보내주는 에러 메시지 띄우기 (예: "날짜를 입력해주세요")
       alert(err.response?.data?.message || "저장에 실패했습니다.");
     }
   };
