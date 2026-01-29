@@ -192,16 +192,13 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   return (
-    // ✨ 3. [수정] 최상위 div에 relative 추가 (로딩창을 안에 가두기 위해)
+    // 최상위 컨테이너 (relative 유지 - 로딩창용)
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
 
-      {/* ✨ 4. [수정] 로딩 오버레이 UI - pb-32 추가로 위치를 위로 올림 */}
+      {/* 로딩 오버레이 (pb-32로 위치 조정됨) */}
       {isAiLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pb-32 bg-white/90 backdrop-blur-sm animate-[fade-in_0.3s]">
-          {/* 스피너 아이콘 */}
           <div className="w-16 h-16 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin mb-6 shadow-sm"></div>
-
-          {/* 안내 텍스트 */}
           <h3 className="text-xl font-bold text-slate-800 mb-2 animate-pulse">
             AI가 일기를 쓰고 있어요 ✍️
           </h3>
@@ -213,7 +210,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       )}
 
       {/* 헤더 */}
-      <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
+      <div className="bg-white px-5 py-3 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
@@ -243,30 +240,31 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         )}
       </div>
 
-      {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+      {/* 메인 입력 영역 (스크롤 가능, 남은 공간 차지) */}
+      <div className="flex-1 flex flex-col p-5 space-y-4 overflow-y-auto custom-scrollbar">
+
         {/* 제목 입력 */}
-        <section>
+        <section className="flex-shrink-0">
           <input
             type="text"
             placeholder="제목을 입력하세요"
-            className="w-full text-2xl font-bold bg-transparent border-b border-slate-100 py-3 focus:outline-none focus:border-primary-400 placeholder:text-slate-300 transition-colors"
+            className="w-full text-xl font-bold bg-transparent border-b border-slate-100 py-2 focus:outline-none focus:border-primary-400 placeholder:text-slate-300 transition-colors"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </section>
 
         {/* 태그 입력 */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm font-bold text-slate-500">태그</span>
+        <section className="flex-shrink-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-bold text-slate-500">태그</span>
             <span className="text-[10px] text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded">Enter로 추가</span>
           </div>
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <span key={tag} className="bg-primary-50 text-primary-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">
+              <span key={tag} className="bg-primary-50 text-primary-700 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
                 #{tag}
-                <button onClick={() => removeTag(tag)} className="hover:text-primary-900 text-lg leading-3">×</button>
+                <button onClick={() => removeTag(tag)} className="hover:text-primary-900 text-base leading-3">×</button>
               </span>
             ))}
             <input
@@ -275,19 +273,19 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
               onChange={(e) => setInputTag(e.target.value)}
               onKeyDown={handleTagKeyDown}
               placeholder="태그 입력..."
-              className="bg-transparent min-w-[100px] text-sm py-1.5 focus:outline-none placeholder:text-slate-300"
+              className="bg-transparent min-w-[80px] text-xs py-1 focus:outline-none placeholder:text-slate-300"
             />
           </div>
         </section>
 
-        {/* 내용 및 사진 */}
-        <section className="flex-1 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-bold text-slate-500">오늘의 이야기</h3>
+        {/* 내용 및 사진 영역 (flex-1로 늘어남) */}
+        <section className="flex-1 flex flex-col gap-2 min-h-0">
+          <div className="flex justify-between items-center flex-shrink-0">
+            <h3 className="text-xs font-bold text-slate-500">오늘의 이야기</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs flex items-center gap-1 text-slate-500 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
+                className="text-[10px] flex items-center gap-1 text-slate-500 font-bold bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition"
               >
                 📷 사진 추가
               </button>
@@ -302,13 +300,13 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           </div>
 
           {images.length > 0 && (
-            <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+            <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar flex-shrink-0">
               {images.map((imgSrc, idx) => (
-                <div key={idx} className="relative flex-shrink-0 w-32 h-32 rounded-xl border border-slate-100 overflow-hidden group shadow-sm">
+                <div key={idx} className="relative flex-shrink-0 w-20 h-20 rounded-lg border border-slate-100 overflow-hidden group shadow-sm">
                   <img src={imgSrc} alt="uploaded" className="w-full h-full object-cover" />
                   <button
                     onClick={() => removeImage(idx)}
-                    className="absolute top-2 right-2 bg-black/60 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition backdrop-blur-sm"
+                    className="absolute top-1 right-1 bg-black/60 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition backdrop-blur-sm"
                   >
                     ✕
                   </button>
@@ -317,9 +315,10 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
             </div>
           )}
 
+          {/* 텍스트 영역 (남은 높이 꽉 채움) */}
           <textarea
-            className="w-full h-80 p-5 rounded-2xl border border-slate-200 bg-slate-50/30 text-slate-700 leading-relaxed 
-            focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all resize-none placeholder:text-slate-300"
+            className="flex-1 w-full p-4 rounded-xl border border-slate-200 bg-slate-50/30 text-slate-700 leading-relaxed 
+            focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all resize-none placeholder:text-slate-300 min-h-[150px]"
             placeholder="자유롭게 기록해보세요."
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -327,7 +326,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         </section>
       </div>
 
-      {/* 하단 버튼 영역 */}
+      {/* 하단 버튼 영역 (고정) */}
       <div className="p-4 bg-white border-t border-slate-100 flex-shrink-0">
         <button
           onClick={handleSave}
