@@ -195,9 +195,9 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     // ✨ 3. [수정] 최상위 div에 relative 추가 (로딩창을 안에 가두기 위해)
     <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
 
-      {/* ✨ 4. [추가] 로딩 오버레이 UI */}
+      {/* ✨ 4. [수정] 로딩 오버레이 UI - pb-32 추가로 위치를 위로 올림 */}
       {isAiLoading && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm animate-[fade-in_0.3s]">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pb-32 bg-white/90 backdrop-blur-sm animate-[fade-in_0.3s]">
           {/* 스피너 아이콘 */}
           <div className="w-16 h-16 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin mb-6 shadow-sm"></div>
 
