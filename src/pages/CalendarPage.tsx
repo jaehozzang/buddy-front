@@ -128,7 +128,7 @@ export default function CalendarPage() {
   return (
     // 🚨 [핵심 수정 1] h-full을 지우고, calc()로 높이를 강제 고정합니다.
     // 100vh(전체화면) - 80px(헤더높이+여백) = 남은 공간 꽉 채우기
-    <div className="h-[calc(100vh-120px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+    <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
 
       {/* [왼쪽] 달력 영역 */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
