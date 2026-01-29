@@ -23,22 +23,25 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ✨ 1. [추가] AI 로딩 상태 관리
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   // --- 데이터 불러오기 로직 ---
   useEffect(() => {
     // 1. 수정 모드일 때 (기존 일기 조회)
     if (mode === "edit" && id) {
       fetchDiaryDetail(Number(id));
     }
-    // 2. ✨ [생성 모드] 채팅방에서 넘어온 sessionId가 있을 때 (AI 일기 생성)
+    // 2. [생성 모드] 채팅방에서 넘어온 sessionId가 있을 때 (AI 일기 생성)
     else if (mode === "create" && location.state?.sessionId) {
       fetchAIDiary(location.state.sessionId);
     }
   }, [mode, id, location.state]);
 
-  // ✨ AI 일기 초안 가져오기
+  // ✨ 2. [수정] AI 일기 초안 가져오기 (로딩 상태 연결)
   const fetchAIDiary = async (sessionId: number) => {
+    setIsAiLoading(true); // 🚀 로딩 시작!
     try {
-      // ChatPage에서 깔끔하게 숫자만 보냈으므로 그대로 호출
       const response = await diaryApi.createDiaryFromChat(sessionId);
 
       if (response.result) {
@@ -54,6 +57,8 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     } catch (error) {
       console.error("AI 일기 생성 실패", error);
       alert("AI 일기 초안을 불러오지 못했습니다.");
+    } finally {
+      setIsAiLoading(false); // 🏁 로딩 끝! (성공하든 실패하든 꺼짐)
     }
   };
 
@@ -129,10 +134,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
-  // src/pages/DiaryPage.tsx - handleSave 함수 교체
-
   const handleSave = async () => {
-    // 1. 유효성 검사
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 모두 입력해주세요!");
       return;
@@ -146,9 +148,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       if (IS_TEST_MODE) {
         // 테스트 모드 로직...
       } else {
-        // DiaryPage.tsx -> handleSave 내부
-
-        // ...
         const formData = new FormData();
 
         const diaryData = {
@@ -158,17 +157,14 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           diaryDate: targetDate,
         };
 
-        // ✨ Swagger처럼 문자열로 보냅니다. (Blob 아님!)
+        // Swagger 스타일 (문자열 전송)
         formData.append("request", JSON.stringify(diaryData));
 
-        // 이미지 추가
         const file = fileInputRef.current?.files?.[0];
         if (file) {
           formData.append("image", file);
         }
-        // ...
 
-        // 4. 전송
         if (mode === "edit" && id) {
           await diaryApi.updateDiary(Number(id), formData);
           alert("일기가 수정되었습니다!");
@@ -181,7 +177,6 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     } catch (error) {
       console.error("저장 실패:", error);
 
-      // 에러 상세 정보 확인
       const err = error as any;
       const status = err.response?.status;
       const errMsg = err.response?.data?.message || "알 수 없는 서버 에러";
@@ -197,7 +192,26 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+    // ✨ 3. [수정] 최상위 div에 relative 추가 (로딩창을 안에 가두기 위해)
+    <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
+
+      {/* ✨ 4. [추가] 로딩 오버레이 UI */}
+      {isAiLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm animate-[fade-in_0.3s]">
+          {/* 스피너 아이콘 */}
+          <div className="w-16 h-16 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin mb-6 shadow-sm"></div>
+
+          {/* 안내 텍스트 */}
+          <h3 className="text-xl font-bold text-slate-800 mb-2 animate-pulse">
+            AI가 일기를 쓰고 있어요 ✍️
+          </h3>
+          <p className="text-slate-500 text-sm text-center">
+            대화 내용을 바탕으로 정리 중입니다.<br />
+            잠시만 기다려주세요!
+          </p>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
         <button
