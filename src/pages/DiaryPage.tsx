@@ -192,9 +192,9 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   return (
-    // 최상위 컨테이너 (relative 유지 - 로딩창용)
-    <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
-
+    // 🚨 [수정 포인트] h-full을 지우고 -> h-[calc(100vh-120px)]로 변경!
+    // 이렇게 해야 화면 높이에 딱 맞춰져서, 내용이 많아도 저장 버튼이 안 밀려납니다.
+    <div className="h-[calc(100vh-120px)] flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
       {/* 로딩 오버레이 (pb-32로 위치 조정됨) */}
       {isAiLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pb-32 bg-white/90 backdrop-blur-sm animate-[fade-in_0.3s]">
