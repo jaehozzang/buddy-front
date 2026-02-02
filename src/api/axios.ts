@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 // 1. 공통 설정
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.8:8080';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://buddy-api.kro.kr';
 
 const commonConfig = {
   baseURL: BASE_URL,
@@ -52,12 +52,16 @@ authApi.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // 에러 코드가 'T002'(Access Token 만료)이고, 아직 재시도를 안 했다면?
-    if (error.response?.data?.code === 'T002' && !originalRequest._retry) {
-      console.log("♻️ [Auto-Refresh] 토큰 만료됨! 재발급 시도 중...");
+    // ✅ [수정 포인트] 서버에서 실제로 내려오는 에러 코드(G003)를 확인해야 합니다.
+    // 기존: error.response?.data?.code === 'T002'
+    const errorCode = error.response?.data?.code;
 
-      originalRequest._retry = true; // 무한 루프 방지용 플래그 설정
+    // T002 혹은 G003 둘 다 토큰 만료로 처리하도록 수정 (혹은 G003으로 변경)
+    if ((errorCode === 'T002' || errorCode === 'G003') && !originalRequest._retry) {
 
+      console.log(`♻️ [Auto-Refresh] 에러코드 ${errorCode} 감지! 토큰 재발급 시도 중...`);
+
+      originalRequest._retry = true;
       try {
         // 1. 저장된 Refresh Token 가져오기
         const currentRefreshToken = localStorage.getItem('refreshToken');
