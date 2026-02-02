@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 // 1. 공통 설정
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://buddy-api.kro.kr';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.8:8080';
 
 const commonConfig = {
   baseURL: BASE_URL,
