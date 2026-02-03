@@ -62,9 +62,18 @@ export default function ReportPage() {
         const stats: Record<string, number> = {};
 
         monthlyDiaries.forEach((diary) => {
-            // 각 일기의 태그 배열을 순회
-            diary.tags.forEach((tag) => {
-                stats[tag] = (stats[tag] || 0) + 1;
+            // 1. tags가 아예 없을 수도 있으니 ?. (옵셔널 체이닝) 추가
+            if (!diary.tags) return;
+
+            // 2. 각 태그 순회
+            diary.tags.forEach((tag: any) => {
+                // 🚨 여기서 수정: 태그가 객체면 .name을, 문자열이면 그대로 사용
+                const tagName = typeof tag === 'string' ? tag : tag.name;
+
+                // tagName이 존재할 때만 카운트 증가
+                if (tagName) {
+                    stats[tagName] = (stats[tagName] || 0) + 1;
+                }
             });
         });
         return stats;
