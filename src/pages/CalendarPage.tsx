@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react"; // useMemo 추가
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, getYear, getMonth } from "date-fns"; // getYear, getMonth 추가
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, getYear, getMonth } from "date-fns";
 import { diaryApi } from "../api/diaryApi";
 import type { DiarySummary } from "../types/diary";
 import { IS_TEST_MODE } from "../config";
@@ -12,7 +12,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dailyDiaries, setDailyDiaries] = useState<DiarySummary[]>([]);
-  const [monthlyDiaries, setMonthlyDiaries] = useState<DiarySummary[]>([]); // ✅ 잔디용 데이터 상태 추가
+  const [monthlyDiaries, setMonthlyDiaries] = useState<DiarySummary[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 달력 계산
@@ -24,34 +24,24 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-  // ✅ [추가된 로직 1] 월간 데이터에서 날짜만 뽑아서 Set으로 만듦 (빠른 검색용)
+  // 월간 데이터 날짜 Set
   const markedDates = useMemo(() => {
     if (!monthlyDiaries || !Array.isArray(monthlyDiaries)) return new Set<string>();
     return new Set(monthlyDiaries.map(diary => {
-      // 데이터 안전장치: createAt이 없거나 형식이 다를 수 있음
       if (!diary.createAt) return "";
       return diary.createAt.split('T')[0];
     }));
   }, [monthlyDiaries]);
 
-  // ✅ [추가된 로직 2] 달이 바뀔 때마다 "이 달의 모든 일기"를 요청 (잔디 심기용)
+  // 월간 데이터 요청
   useEffect(() => {
     const fetchMonthlyData = async () => {
       try {
-        if (IS_TEST_MODE) {
-          // 테스트 모드는 생략
-        } else {
+        if (!IS_TEST_MODE) {
           const year = getYear(currentMonth);
           const month = getMonth(currentMonth) + 1;
-
-          // API 호출
           const response = await diaryApi.getMonthlyDiaries(year, month);
-
-          // 🚨 [중요] F12 콘솔에서 이 로그를 확인해주세요!
-          console.log(`[달력확인] ${year}년 ${month}월 데이터 요청 결과:`, response);
-
           if (response && Array.isArray(response.result)) {
-            // 만약 데이터가 1개밖에 안 들어온다면 백엔드 문제입니다.
             setMonthlyDiaries(response.result);
           }
         }
@@ -62,7 +52,7 @@ export default function CalendarPage() {
     fetchMonthlyData();
   }, [currentMonth]);
 
-  // 기존 로직: 선택된 날짜의 일기 가져오기
+  // 일간 데이터 요청
   useEffect(() => {
     const fetchDiaries = async () => {
       setLoading(true);
@@ -70,15 +60,20 @@ export default function CalendarPage() {
 
       try {
         if (IS_TEST_MODE) {
-          setDailyDiaries(Array(10).fill(null).map((_, i) => ({
+          // 테스트 모드
+          setDailyDiaries(Array(5).fill(null).map((_, i) => ({
             diarySeq: i + 1,
-            title: `스크롤 테스트 ${i + 1}`,
-            summary: "일기가 많아지면 스크롤이 생겨야 합니다. ".repeat(2),
+            title: `레이아웃 확인용 ${i + 1}`,
+            summary: "텍스트는 왼쪽에 나오고, 사진은 오른쪽에 작게 나와야 합니다.",
             createAt: dateStr + `T10:00:00`,
-            tags: ["테스트"]
-          })));
+            tags: ["디자인", "수정"],
+            images: i % 2 === 0 ? ["https://picsum.photos/200"] : []
+          } as any)));
         } else {
           const response = await diaryApi.getDiariesByDate(dateStr);
+          // 🚨 데이터 확인용 로그
+          console.log("리스트 조회 데이터:", response.result);
+
           if (response.result && Array.isArray(response.result)) {
             setDailyDiaries(response.result);
           } else {
@@ -96,37 +91,26 @@ export default function CalendarPage() {
     fetchDiaries();
   }, [selectedDate]);
 
-  const handleDiaryClick = (diarySeq: number) => {
-    navigate(`/app/diary/${diarySeq}`);
-  };
+  // 핸들러들
+  const handleDiaryClick = (diarySeq: number) => navigate(`/app/diary/${diarySeq}`);
 
-  const handleWriteNew = () => {
-    navigate("/app/diary/new", {
-      state: { date: format(selectedDate, "yyyy-MM-dd") }
-    });
-  };
+  const handleWriteNew = () => navigate("/app/diary/new", { state: { date: format(selectedDate, "yyyy-MM-dd") } });
 
-  const handleEditClick = (e: React.MouseEvent, diarySeq: number) => {
-    e.stopPropagation();
-    navigate(`/app/diary/${diarySeq}`, { state: { mode: "edit" } });
-  };
+  // ✅ [삭제됨] handleEditClick 함수 제거 (리스트에서 수정 버튼 뺐으니까 필요 없음)
 
-  // 날짜 렌더링
+  // 달력 렌더링 함수들
   const renderCells = () => {
     const rows = [];
     let days = [];
     let day = startDate;
-
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
         const formattedDate = format(day, "d");
-        const dateKey = format(day, "yyyy-MM-dd"); // 비교를 위한 키 ("2024-02-03")
+        const dateKey = format(day, "yyyy-MM-dd");
         const cloneDay = day;
         const isSelected = isSameDay(day, selectedDate);
         const isNotCurrentMonth = !isSameMonth(day, monthStart);
         const isToday = isSameDay(day, new Date());
-
-        // ✅ [추가된 로직 3] 이 날짜에 일기가 있는지 확인
         const hasDiary = markedDates.has(dateKey);
 
         days.push(
@@ -138,16 +122,12 @@ export default function CalendarPage() {
             `}
             onClick={() => setSelectedDate(cloneDay)}
           >
-            {/* ✅ [추가된 디자인] 잔디 배경 (일기 있으면 연한 배경색) */}
             {hasDiary && !isNotCurrentMonth && (
               <div className="absolute inset-1 bg-green-100/50 rounded pointer-events-none" />
             )}
-
             <span className={`relative z-10 text-sm font-medium ${isToday ? "bg-primary-600 text-white w-6 h-6 rounded-full flex items-center justify-center" : ""}`}>
               {formattedDate}
             </span>
-
-            {/* ✅ [추가된 디자인] 잔디 점 (일기 있으면 작은 점 표시) */}
             {hasDiary && !isNotCurrentMonth && (
               <div className="relative z-10 mt-1 w-1.5 h-1.5 bg-green-500 rounded-full" />
             )}
@@ -180,9 +160,8 @@ export default function CalendarPage() {
 
   return (
     <div className="h-[calc(100vh-160px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-      {/* [왼쪽] 달력 영역 */}
+      {/* [왼쪽] 달력 */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {/* 달력 헤더 */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 flex-shrink-0">
           <h2 className="text-xl font-bold text-slate-800">
             {format(currentMonth, "MMMM yyyy")}
@@ -192,8 +171,6 @@ export default function CalendarPage() {
             <button onClick={nextMonth} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500">›</button>
           </div>
         </div>
-
-        {/* 달력 그리드 */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {renderDays()}
           <div className="flex-1 flex flex-col border-t border-slate-100">
@@ -202,8 +179,9 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* [오른쪽] 일기 리스트 영역 (원래 코드 그대로 유지) */}
+      {/* [오른쪽] 일기 리스트 */}
       <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 bg-slate-50/50 flex flex-col h-[45%] md:h-full overflow-hidden">
+        {/* 리스트 헤더 */}
         <div className="px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0 z-10 shadow-sm h-[70px]">
           <div>
             <h3 className="text-sm font-bold text-slate-800">
@@ -221,52 +199,85 @@ export default function CalendarPage() {
           </button>
         </div>
 
+        {/* 리스트 본문 */}
         <div className="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">불러오는 중...</div>
           ) : dailyDiaries.length > 0 ? (
-            <div className="space-y-4 animate-[fade-in_0.3s] pb-10">
-              {dailyDiaries.map((diary) => (
-                <div
-                  key={diary.diarySeq}
-                  onClick={() => handleDiaryClick(diary.diarySeq)}
-                  className="group bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-primary-300 transition cursor-pointer relative overflow-hidden"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-slate-800 text-sm truncate pr-2 flex-1">
-                      {diary.title}
-                    </h4>
-                    <button
-                      onClick={(e) => handleEditClick(e, diary.diarySeq)}
-                      className="text-[10px] text-slate-300 hover:text-primary-600 font-bold px-2 py-1 rounded hover:bg-primary-50 transition"
-                    >
-                      수정 ›
-                    </button>
+            <div className="space-y-3 animate-[fade-in_0.3s] pb-10">
+              {dailyDiaries.map((diary) => {
+                // 🖼️ 이미지 찾기 로직
+                const imgList = (diary as any).images || [];
+                const singleImg = (diary as any).imageUrl || (diary as any).thumbnail;
+
+                let previewUrl = null;
+                if (Array.isArray(imgList) && imgList.length > 0) {
+                  const firstItem = imgList[0];
+                  previewUrl = typeof firstItem === 'string' ? firstItem : firstItem.url;
+                } else if (singleImg) {
+                  previewUrl = singleImg;
+                }
+
+                return (
+                  <div
+                    key={diary.diarySeq}
+                    onClick={() => handleDiaryClick(diary.diarySeq)}
+                    className="group bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-primary-300 transition cursor-pointer relative overflow-hidden"
+                  >
+                    {/* ✅ 레이아웃: flex로 좌우 분할 */}
+                    <div className="flex gap-4">
+
+                      {/* 👈 [왼쪽] 텍스트 정보 (flex-1) */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        {/* 상단: 제목 + 시간 */}
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-bold text-slate-800 text-sm truncate pr-1">
+                            {diary.title}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded flex-shrink-0">
+                            {diary.createAt.split('T')[1]?.substring(0, 5)}
+                          </span>
+                        </div>
+
+                        {/* 요약 내용 (최대 2줄) */}
+                        <p className="text-slate-600 text-xs leading-relaxed line-clamp-2">
+                          {diary.summary}
+                        </p>
+
+                        {/* 태그 */}
+                        {diary.tags && (
+                          <div className="flex flex-wrap gap-1 mt-auto pt-1">
+                            {diary.tags.map((tag: any, idx) => {
+                              const tagName = typeof tag === 'string' ? tag : tag.name;
+                              return (
+                                <span key={idx} className="text-[10px] text-primary-600 font-bold bg-primary-50 px-1.5 py-0.5 rounded-md">
+                                  #{tagName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 👉 [오른쪽] 썸네일 이미지 (사진 있을 때만 렌더링) */}
+                      {previewUrl && (
+                        <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+                          <img
+                            src={previewUrl}
+                            alt="thumbnail"
+                            className="w-full h-full object-cover transform group-hover:scale-110 transition duration-500"
+                          />
+                        </div>
+                      )}
+
+                    </div>
+                    {/* 🗑️ 수정 버튼 제거 완료! */}
                   </div>
-                  <div className="mb-2">
-                    <span className="text-[10px] text-slate-400">
-                      {diary.createAt.split('T')[1]?.substring(0, 5)}
-                    </span>
-                  </div>
-                  <div className="mb-3">
-                    <p className="text-slate-600 text-sm leading-relaxed line-clamp-2">
-                      {diary.summary}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {diary.tags.map((tag: any, idx) => {
-                      const tagName = typeof tag === 'string' ? tag : tag.name;
-                      return (
-                        <span key={idx} className="bg-slate-50 border border-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-medium">
-                          #{tagName}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
+            // 데이터 없을 때
             <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 text-2xl">
                 📅
