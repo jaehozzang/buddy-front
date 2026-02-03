@@ -6,7 +6,7 @@ function RegisterNicknamePage() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // 이전 페이지에서 받은 email, password (명세서에 맞게 userId -> email로 변경)
+    // 이전 페이지에서 받은 email, password
     const { email, password } = location.state || {};
 
     return (
@@ -14,31 +14,46 @@ function RegisterNicknamePage() {
             <div className="rounded-2xl border border-primary-200 shadow-md bg-white px-10 py-10 w-[380px]">
 
                 <form
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-6"
                     onSubmit={(e) => {
                         e.preventDefault();
                         if (!nickname.trim()) return;
 
-                        // ✨ [중요] 이메일, 비번, 닉네임을 다 들고 캐릭터 선택으로 이동!
                         navigate("/auth/register/character", {
                             state: {
-                                email: email,       // 그대로 전달
-                                password: password, // 그대로 전달
+                                email: email,
+                                password: password,
                                 userNickname: nickname
                             }
                         });
                     }}
                 >
+                    {/* NICKNAME INPUT AREA */}
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 text-sm">🏷️</span>
+                        {/* ✨ 아이콘 제거됨 */}
+
                         <input
                             type="text"
-                            placeholder="NICKNAME"
+                            id="nickname"
                             value={nickname}
                             onChange={(e) => setNickname(e.target.value)}
-                            className="w-full rounded-md bg-white border border-primary-200 px-10 py-3 
-                            text-sm text-slate-700 focus:outline-none focus:border-primary-400"
+                            // ✨ px-8 -> px-4 변경 (아이콘 공간 삭제)
+                            className="peer w-full rounded-md bg-white border border-primary-200 px-4 py-3 
+                            text-sm text-slate-700 focus:outline-none focus:border-primary-400 placeholder-transparent"
+                            placeholder=" "
                         />
+
+                        {/* Floating Label */}
+                        <label
+                            htmlFor="nickname"
+                            // ✨ left-8 -> left-4 변경 (입력 텍스트 시작점과 맞춤)
+                            className="absolute left-4 top-3 text-sm text-slate-400 transition-all cursor-text bg-white px-1
+                            peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold
+                            peer-placeholder-shown:top-3 peer-placeholder-shown:left-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
+                            peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold"
+                        >
+                            닉네임
+                        </label>
                     </div>
 
                     <button

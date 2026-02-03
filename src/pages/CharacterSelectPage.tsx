@@ -16,7 +16,6 @@ function CharacterSelectPage() {
   ];
 
   const [index, setIndex] = useState(0);
-  // ✨ [추가] 캐릭터 닉네임 state
   const [characterNickname, setCharacterNickname] = useState("");
 
   const prev = () => setIndex((prev) => (prev - 1 + characters.length) % characters.length);
@@ -29,7 +28,6 @@ function CharacterSelectPage() {
       return;
     }
 
-    // ✨ [추가] 캐릭터 닉네임 입력 확인
     if (!characterNickname.trim()) {
       alert("캐릭터의 이름을 지어주세요!");
       return;
@@ -44,7 +42,7 @@ function CharacterSelectPage() {
           password,
           nickname: userNickname,
           characterSeq: selectedCharacter.seq,
-          characterNickname // ✨ 확인용
+          characterNickname
         });
         await new Promise(resolve => setTimeout(resolve, 1000));
         alert("[TEST] 회원가입 성공!");
@@ -55,7 +53,7 @@ function CharacterSelectPage() {
           password: password,
           nickname: userNickname,
           characterSeq: selectedCharacter.seq,
-          characterNickname: characterNickname // ✨ [추가] API에 전달
+          characterNickname: characterNickname
         });
 
         alert("회원가입 완료! 로그인해주세요.");
@@ -72,12 +70,6 @@ function CharacterSelectPage() {
   return (
     <div className="min-h-[calc(100vh-150px)] flex items-center justify-center bg-white px-6">
       <div className="flex flex-col items-center text-center gap-6">
-
-        {/* 안내 문구 (옵션)
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Choose Your Partner</h2>
-          <p className="text-slate-500 mt-2">함께할 캐릭터를 선택하고 이름을 지어주세요.</p>
-        </div> */}
 
         {/* 캐릭터 이미지 슬라이더 */}
         <div className="flex items-center justify-center gap-4 sm:gap-8 h-48 mt-4">
@@ -99,26 +91,36 @@ function CharacterSelectPage() {
           <button onClick={next} className="text-3xl text-slate-300 hover:text-slate-500 transition-colors p-2">▶</button>
         </div>
 
-        {/* ✨ [추가] 캐릭터 닉네임 입력창 (버튼과 같은 w-80 너비) */}
-        <div className="w-80 mt-2">
-          {/* <label className="block text-sm font-bold text-slate-500 mb-2 text-left ml-1">
-            CHARACTER NICKNAME
-          </label> */}
+        {/* ✨ [수정] 아이콘 제거 및 간격 조정 */}
+        <div className="relative w-80 mt-2 text-left">
+
           <input
             type="text"
+            id="characterNickname"
             value={characterNickname}
             onChange={(e) => setCharacterNickname(e.target.value)}
-            placeholder="CHARACTER NICKNAME"
-            className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-200 
-                focus:outline-none focus:ring-2 focus:ring-primary-400 focus:bg-white 
-                transition-all text-sm text-slate-700 placeholder:text-slate-400"
+            // ✨ px-8 -> px-4 (아이콘 공간 삭제)
+            className="peer w-full rounded-md bg-white border border-primary-200 px-4 py-3 
+            text-sm text-slate-700 focus:outline-none focus:border-primary-400 placeholder-transparent"
+            placeholder=" "
           />
+
+          <label
+            htmlFor="characterNickname"
+            // ✨ left-8 -> left-4 (시작 위치 정렬)
+            className="absolute left-4 top-3 text-sm text-slate-400 transition-all cursor-text bg-white px-1
+            peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold
+            peer-placeholder-shown:top-3 peer-placeholder-shown:left-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
+            peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold"
+          >
+            캐릭터 이름
+          </label>
         </div>
 
         <button
           onClick={handleStart}
-          className="w-80 rounded-xl bg-primary-600 py-4 text-sm font-bold text-white
-          tracking-wider hover:bg-primary-700 shadow-lg shadow-primary-200 active:scale-[0.98] transition-all"
+          className="w-80 rounded-md bg-primary-600 py-4 text-sm font-bold text-white
+          tracking-wider hover:bg-primary-700 shadow-md shadow-primary-300/40 active:scale-[0.98] transition-all"
         >
           COMPLETE SIGNUP
         </button>
