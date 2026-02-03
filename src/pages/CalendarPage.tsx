@@ -14,6 +14,9 @@ export default function CalendarPage() {
   const [dailyDiaries, setDailyDiaries] = useState<DiarySummary[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 이번 달에 일기가 존재하는 날짜들을 저장하는 Set
+  const [activeDates, setActiveDates] = useState<Set<string>>(new Set());
+
   // 달력 계산
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -23,6 +26,36 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
+  // 2. 월이 변경될 때마다 "일기가 있는 날짜 목록"을 가져오는 로직
+  useEffect(() => {
+    const fetchMonthlyActiveDates = async () => {
+      const yearMonth = format(currentMonth, "yyyy-MM");
+
+      if (IS_TEST_MODE) {
+        // 🛠️ [TEST] 테스트 모드: 짝수 날짜마다 일기가 있다고 가정
+        const dummySet = new Set<string>();
+        const daysInMonth = endOfMonth(currentMonth).getDate();
+        for (let i = 2; i <= daysInMonth; i += 2) {
+          dummySet.add(`${yearMonth}-${String(i).padStart(2, '0')}`);
+        }
+        // 오늘 날짜도 포함 (테스트용)
+        dummySet.add(format(new Date(), "yyyy-MM-dd"));
+        setActiveDates(dummySet);
+      } else {
+        // 🚀 [REAL] 실제 API 연동
+        try {
+          // const dates = await diaryApi.getDatesWithDiaries(yearMonth);
+          // setActiveDates(new Set(dates));
+        } catch (error) {
+          console.error("월별 데이터 로드 실패", error);
+        }
+      }
+    };
+
+    fetchMonthlyActiveDates();
+  }, [currentMonth]);
+
+  // 3. 선택된 날짜의 일기 목록 가져오기
   useEffect(() => {
     const fetchDiaries = async () => {
       setLoading(true);
@@ -30,14 +63,19 @@ export default function CalendarPage() {
 
       try {
         if (IS_TEST_MODE) {
-          // 테스트용 데이터 (스크롤 확인용으로 많이 생성)
-          setDailyDiaries(Array(10).fill(null).map((_, i) => ({
-            diarySeq: i + 1,
-            title: `스크롤 테스트 ${i + 1}`,
-            summary: "일기가 많아지면 스크롤이 생겨야 합니다. ".repeat(2),
-            createAt: dateStr + `T10:00:00`,
-            tags: ["테스트"]
-          })));
+          // 테스트용 데이터
+          const hasDiary = activeDates.has(dateStr);
+          if (hasDiary) {
+            setDailyDiaries(Array(3).fill(null).map((_, i) => ({
+              diarySeq: i + 1,
+              title: `기록된 일기 ${i + 1}`,
+              summary: "달력 왼쪽 상단에 숫자가 잘 표시되나요?",
+              createAt: dateStr + `T10:00:00`,
+              tags: ["감정", "기록"]
+            })));
+          } else {
+            setDailyDiaries([]);
+          }
         } else {
           const response = await diaryApi.getDiariesByDate(dateStr);
           if (response.result && Array.isArray(response.result)) {
@@ -55,7 +93,7 @@ export default function CalendarPage() {
     };
 
     fetchDiaries();
-  }, [selectedDate]);
+  }, [selectedDate, activeDates]);
 
   const handleDiaryClick = (diarySeq: number) => {
     navigate(`/app/diary/${diarySeq}`);
@@ -72,7 +110,7 @@ export default function CalendarPage() {
     navigate(`/app/diary/${diarySeq}`, { state: { mode: "edit" } });
   };
 
-  // 날짜 렌더링
+  // 4. 날짜 렌더링
   const renderCells = () => {
     const rows = [];
     let days = [];
@@ -80,22 +118,40 @@ export default function CalendarPage() {
 
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
+        const dateKey = format(day, "yyyy-MM-dd");
         const formattedDate = format(day, "d");
         const cloneDay = day;
         const isSelected = isSameDay(day, selectedDate);
         const isNotCurrentMonth = !isSameMonth(day, monthStart);
         const isToday = isSameDay(day, new Date());
 
+        // 일기가 있는지 확인
+        const hasDiary = activeDates.has(dateKey);
+
         days.push(
           <div
             key={day.toString()}
-            className={`relative h-20 md:h-auto md:flex-1 border-r border-b border-slate-100 flex flex-col items-start justify-start p-2 cursor-pointer transition-colors
-              ${isNotCurrentMonth ? "text-slate-300 bg-slate-50/50" : "text-slate-700 bg-white"}
+            // ✨ [수정] items-center -> items-start (왼쪽 정렬)
+            // ✨ [수정] pt-2 -> pt-2 pl-2 (위, 왼쪽 여백 추가)
+            className={`relative h-20 md:h-auto md:flex-1 border-r border-b border-slate-100 flex flex-col items-start justify-start pt-2 pl-2 cursor-pointer transition-colors group
+              ${isNotCurrentMonth ? "text-slate-300 bg-slate-50/50" : "bg-white"}
               ${isSelected ? "bg-primary-50 ring-2 ring-inset ring-primary-200 z-10" : "hover:bg-slate-50"}
             `}
             onClick={() => setSelectedDate(cloneDay)}
           >
-            <span className={`text-sm font-medium ${isToday ? "bg-primary-600 text-white w-6 h-6 rounded-full flex items-center justify-center" : ""}`}>
+            {/* 날짜 숫자 + 배경색 하이라이트 */}
+            <span className={`
+              text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full mb-1 transition-all
+              ${isToday
+                ? "bg-primary-600 text-white shadow-md font-bold"
+                : hasDiary
+                  ? "bg-primary-100 text-primary-600 font-bold"
+                  : isSelected
+                    ? "text-primary-600 font-bold"
+                    : "text-slate-700"
+              }
+              ${!isToday && !hasDiary && isNotCurrentMonth ? "text-slate-300" : ""}
+            `}>
               {formattedDate}
             </span>
           </div>
@@ -126,8 +182,6 @@ export default function CalendarPage() {
   };
 
   return (
-    // 🚨 [핵심 수정 1] h-full을 지우고, calc()로 높이를 강제 고정합니다.
-    // 100vh(전체화면) - 80px(헤더높이+여백) = 남은 공간 꽉 채우기
     <div className="h-[calc(100vh-160px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
 
       {/* [왼쪽] 달력 영역 */}
@@ -142,7 +196,7 @@ export default function CalendarPage() {
             <button onClick={nextMonth} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500">›</button>
           </div>
         </div>
-        
+
         {/* 달력 그리드 */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {renderDays()}
@@ -153,10 +207,9 @@ export default function CalendarPage() {
       </div>
 
       {/* [오른쪽] 일기 리스트 영역 */}
-      {/* 🚨 [핵심 수정 2] h-full과 overflow-hidden 필수 */}
       <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 bg-slate-50/50 flex flex-col h-[45%] md:h-full overflow-hidden">
 
-        {/* 리스트 헤더 (고정) */}
+        {/* 리스트 헤더 */}
         <div className="px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0 z-10 shadow-sm h-[70px]">
           <div>
             <h3 className="text-sm font-bold text-slate-800">
@@ -175,7 +228,6 @@ export default function CalendarPage() {
         </div>
 
         {/* 리스트 스크롤 영역 */}
-        {/* 🚨 [핵심 수정 3] flex-1로 남은 공간 다 차지하고, 넘치면 여기서 스크롤(overflow-y-auto) */}
         <div className="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">불러오는 중...</div>
