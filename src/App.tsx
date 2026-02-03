@@ -23,6 +23,7 @@ import DiaryPage from "./pages/DiaryPage";
 import SettingsPage from "./pages/SettingsPage";
 import MainLayout from "./MainLayout";
 import ReportPage from "./pages/ReportPage";
+import DiaryViewPage from "./pages/DiaryViewPage";
 
 function App() {
   const location = useLocation();
@@ -68,13 +69,16 @@ function App() {
             <Route path="home" element={<HomePage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="calendar" element={<CalendarPage />} />
+            {/* 👇 [수정 2] 일기 관련 라우팅 변경 👇 */}
+            {/* 1. 일기 쓰기 (새 글) */}
             <Route path="diary/new" element={<DiaryPage mode="create" />} />
-            <Route path="diary/:id" element={<DiaryPage mode="edit" />} />
+            {/* 2. 일기 읽기 (뷰어 페이지) -> 여기로 먼저 연결됨! */}
+            <Route path="diary/:id" element={<DiaryViewPage />} />
+            {/* 3. 일기 수정 (수정 페이지) -> /edit을 붙여서 구분 */}
+            <Route path="diary/:id/edit" element={<DiaryPage mode="edit" />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="report" element={<ReportPage />} />
           </Route>
-
-          {/* 나머지 다 인트로로 */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

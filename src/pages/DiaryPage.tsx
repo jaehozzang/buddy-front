@@ -1,3 +1,5 @@
+// src/pages/DiaryPage.tsx
+
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { diaryApi } from "../api/diaryApi";
@@ -20,36 +22,35 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [inputTag, setInputTag] = useState("");
+
+  // 미리보기용 URL 상태
   const [images, setImages] = useState<string[]>([]);
+
+  // ✅ [수정 1] 실제 전송할 파일 객체를 저장할 State 추가
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✨ 1. [추가] AI 로딩 상태 관리
+  // AI 로딩 상태 관리
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   // --- 데이터 불러오기 로직 ---
   useEffect(() => {
-    // 1. 수정 모드일 때 (기존 일기 조회)
     if (mode === "edit" && id) {
       fetchDiaryDetail(Number(id));
-    }
-    // 2. [생성 모드] 채팅방에서 넘어온 sessionId가 있을 때 (AI 일기 생성)
-    else if (mode === "create" && location.state?.sessionId) {
+    } else if (mode === "create" && location.state?.sessionId) {
       fetchAIDiary(location.state.sessionId);
     }
   }, [mode, id, location.state]);
 
-  // ✨ 2. [수정] AI 일기 초안 가져오기 (로딩 상태 연결)
   const fetchAIDiary = async (sessionId: number) => {
-    setIsAiLoading(true); // 🚀 로딩 시작!
+    setIsAiLoading(true);
     try {
       const response = await diaryApi.createDiaryFromChat(sessionId);
-
       if (response.result) {
         const d = response.result;
         setTitle(d.title);
         setContent(d.content);
-
-        // 태그 처리 (객체 배열이면 이름만 추출)
         if (d.tags) {
           setTags(d.tags.map((t: any) => (typeof t === "string" ? t : t.name)));
         }
@@ -58,7 +59,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       console.error("AI 일기 생성 실패", error);
       alert("AI 일기 초안을 불러오지 못했습니다.");
     } finally {
-      setIsAiLoading(false); // 🏁 로딩 끝! (성공하든 실패하든 꺼짐)
+      setIsAiLoading(false);
     }
   };
 
@@ -74,7 +75,9 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           const d = response.result;
           setTitle(d.title);
           setContent(d.content);
-          setTags(d.tags.map(t => t.name));
+          setTags(d.tags.map((t: any) => t.name));
+          // (참고) 기존 이미지가 있다면 여기서 images 상태에 넣어줘야 뷰어에서 보임
+          // 현재 로직은 새 파일 업로드 위주이므로 패스
         }
       }
     } catch (error) {
@@ -96,26 +99,36 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
+    setTags(tags.filter((t) => t !== tagToRemove));
   };
 
+  // ✅ [수정 2] 이미지 업로드 핸들러: 파일을 state에 저장
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return alert("2MB 이하만 가능합니다.");
+    if (file.size > 5 * 1024 * 1024) return alert("5MB 이하만 가능합니다."); // 넉넉하게 5MB
 
+    // 1. 전송용 파일 객체 저장 (중요!)
+    setSelectedFile(file);
+
+    // 2. 미리보기 생성
     const reader = new FileReader();
     reader.onloadend = () => {
       if (typeof reader.result === "string") {
-        setImages([...images, reader.result]);
+        // API가 사진 1장만 지원하므로 덮어쓰기
+        setImages([reader.result]);
       }
     };
     reader.readAsDataURL(file);
+
+    // input 초기화 (이제 selectedFile에 저장했으니 초기화해도 안전함)
     e.target.value = "";
   };
 
+  // ✅ [수정 3] 이미지 삭제 시 파일 객체도 같이 삭제
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+    setSelectedFile(null);
   };
 
   const handleDelete = async () => {
@@ -134,6 +147,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
     }
   };
 
+  // ✅ [수정 4] 저장 핸들러: state에 있는 파일 사용
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 모두 입력해주세요!");
@@ -146,7 +160,8 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
 
     try {
       if (IS_TEST_MODE) {
-        // 테스트 모드 로직...
+        alert("테스트 모드 저장 완료");
+        navigate("/app/calendar");
       } else {
         const formData = new FormData();
 
@@ -157,15 +172,18 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           diaryDate: targetDate,
         };
 
-        // Swagger 스타일 (문자열 전송)
+        // 1. JSON 데이터 추가
         formData.append("request", JSON.stringify(diaryData));
 
-        const file = fileInputRef.current?.files?.[0];
-        if (file) {
-          formData.append("image", file);
+        // 2. 파일 추가 (input Ref가 아니라 state에서 가져옴)
+        if (selectedFile) {
+          // 명세서에 "image"라고 되어 있었으므로 "image" 사용
+          formData.append("image", selectedFile);
         }
 
         if (mode === "edit" && id) {
+          // 수정 API는 보통 이미지를 교체하거나 유지하는 로직이 백엔드에 있어야 함
+          // 여기서는 새 파일이 있을 때만 보냄
           await diaryApi.updateDiary(Number(id), formData);
           alert("일기가 수정되었습니다!");
         } else {
@@ -176,15 +194,14 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
       }
     } catch (error) {
       console.error("저장 실패:", error);
-
       const err = error as any;
       const status = err.response?.status;
       const errMsg = err.response?.data?.message || "알 수 없는 서버 에러";
 
       if (status === 500) {
-        alert(`[500 에러] 서버가 데이터를 처리하지 못했습니다.\nJSON 문자열 방식도 실패했다면 서버 로그 확인이 필요합니다.`);
+        alert(`[500] 서버 에러 발생. 로그 확인 필요.`);
       } else if (status === 400) {
-        alert(`[400 에러] 요청 형식이 잘못되었습니다.\n메시지: ${errMsg}`);
+        alert(`[400] 요청 형식 오류: ${errMsg}`);
       } else {
         alert(`저장 실패: ${status}\n${errMsg}`);
       }
@@ -192,10 +209,8 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
   };
 
   return (
-    // 🚨 [수정 포인트] h-full을 지우고 -> h-[calc(100vh-120px)]로 변경!
-    // 이렇게 해야 화면 높이에 딱 맞춰져서, 내용이 많아도 저장 버튼이 안 밀려납니다.
     <div className="h-[calc(100vh-120px)] flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
-      {/* 로딩 오버레이 (pb-32로 위치 조정됨) */}
+      {/* 로딩 오버레이 */}
       {isAiLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pb-32 bg-white/90 backdrop-blur-sm animate-[fade-in_0.3s]">
           <div className="w-16 h-16 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin mb-6 shadow-sm"></div>
@@ -240,7 +255,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         )}
       </div>
 
-      {/* 메인 입력 영역 (스크롤 가능, 남은 공간 차지) */}
+      {/* 메인 입력 영역 */}
       <div className="flex-1 flex flex-col p-5 space-y-4 overflow-y-auto custom-scrollbar">
 
         {/* 제목 입력 */}
@@ -278,7 +293,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
           </div>
         </section>
 
-        {/* 내용 및 사진 영역 (flex-1로 늘어남) */}
+        {/* 내용 및 사진 영역 */}
         <section className="flex-1 flex flex-col gap-2 min-h-0">
           <div className="flex justify-between items-center flex-shrink-0">
             <h3 className="text-xs font-bold text-slate-500">오늘의 이야기</h3>
@@ -315,7 +330,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
             </div>
           )}
 
-          {/* 텍스트 영역 (남은 높이 꽉 채움) */}
+          {/* 텍스트 영역 */}
           <textarea
             className="flex-1 w-full p-4 rounded-xl border border-slate-200 bg-slate-50/30 text-slate-700 leading-relaxed 
             focus:outline-none focus:border-primary-300 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all resize-none placeholder:text-slate-300 min-h-[150px]"
@@ -326,7 +341,7 @@ export default function DiaryPage({ mode = "create" }: DiaryPageProps) {
         </section>
       </div>
 
-      {/* 하단 버튼 영역 (고정) */}
+      {/* 하단 버튼 영역 */}
       <div className="p-4 bg-white border-t border-slate-100 flex-shrink-0">
         <button
           onClick={handleSave}
