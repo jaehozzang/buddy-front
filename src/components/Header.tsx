@@ -134,7 +134,7 @@ export default function Header() {
                     </div>
 
                     <HeaderButton to="/app/chat" variant="solid">
-                        Let's chat!
+                        대화하기
                     </HeaderButton>
 
                     {/* 프로필 호버 메뉴 */}

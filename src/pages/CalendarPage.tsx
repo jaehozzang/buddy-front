@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react"; // useMemo 추가
 import { useNavigate } from "react-router-dom";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, getYear, getMonth } from "date-fns"; // getYear, getMonth 추가
 import { diaryApi } from "../api/diaryApi";
 import type { DiarySummary } from "../types/diary";
 import { IS_TEST_MODE } from "../config";
@@ -12,6 +12,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dailyDiaries, setDailyDiaries] = useState<DiarySummary[]>([]);
+  const [monthlyDiaries, setMonthlyDiaries] = useState<DiarySummary[]>([]); // ✅ 잔디용 데이터 상태 추가
   const [loading, setLoading] = useState(false);
 
   // 달력 계산
@@ -23,6 +24,45 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
+  // ✅ [추가된 로직 1] 월간 데이터에서 날짜만 뽑아서 Set으로 만듦 (빠른 검색용)
+  const markedDates = useMemo(() => {
+    if (!monthlyDiaries || !Array.isArray(monthlyDiaries)) return new Set<string>();
+    return new Set(monthlyDiaries.map(diary => {
+      // 데이터 안전장치: createAt이 없거나 형식이 다를 수 있음
+      if (!diary.createAt) return "";
+      return diary.createAt.split('T')[0];
+    }));
+  }, [monthlyDiaries]);
+
+  // ✅ [추가된 로직 2] 달이 바뀔 때마다 "이 달의 모든 일기"를 요청 (잔디 심기용)
+  useEffect(() => {
+    const fetchMonthlyData = async () => {
+      try {
+        if (IS_TEST_MODE) {
+          // 테스트 모드는 생략
+        } else {
+          const year = getYear(currentMonth);
+          const month = getMonth(currentMonth) + 1;
+
+          // API 호출
+          const response = await diaryApi.getMonthlyDiaries(year, month);
+
+          // 🚨 [중요] F12 콘솔에서 이 로그를 확인해주세요!
+          console.log(`[달력확인] ${year}년 ${month}월 데이터 요청 결과:`, response);
+
+          if (response && Array.isArray(response.result)) {
+            // 만약 데이터가 1개밖에 안 들어온다면 백엔드 문제입니다.
+            setMonthlyDiaries(response.result);
+          }
+        }
+      } catch (error) {
+        console.error("월간 데이터 로드 실패", error);
+      }
+    };
+    fetchMonthlyData();
+  }, [currentMonth]);
+
+  // 기존 로직: 선택된 날짜의 일기 가져오기
   useEffect(() => {
     const fetchDiaries = async () => {
       setLoading(true);
@@ -30,7 +70,6 @@ export default function CalendarPage() {
 
       try {
         if (IS_TEST_MODE) {
-          // 테스트용 데이터 (스크롤 확인용으로 많이 생성)
           setDailyDiaries(Array(10).fill(null).map((_, i) => ({
             diarySeq: i + 1,
             title: `스크롤 테스트 ${i + 1}`,
@@ -81,10 +120,14 @@ export default function CalendarPage() {
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
         const formattedDate = format(day, "d");
+        const dateKey = format(day, "yyyy-MM-dd"); // 비교를 위한 키 ("2024-02-03")
         const cloneDay = day;
         const isSelected = isSameDay(day, selectedDate);
         const isNotCurrentMonth = !isSameMonth(day, monthStart);
         const isToday = isSameDay(day, new Date());
+
+        // ✅ [추가된 로직 3] 이 날짜에 일기가 있는지 확인
+        const hasDiary = markedDates.has(dateKey);
 
         days.push(
           <div
@@ -95,9 +138,19 @@ export default function CalendarPage() {
             `}
             onClick={() => setSelectedDate(cloneDay)}
           >
-            <span className={`text-sm font-medium ${isToday ? "bg-primary-600 text-white w-6 h-6 rounded-full flex items-center justify-center" : ""}`}>
+            {/* ✅ [추가된 디자인] 잔디 배경 (일기 있으면 연한 배경색) */}
+            {hasDiary && !isNotCurrentMonth && (
+              <div className="absolute inset-1 bg-green-100/50 rounded pointer-events-none" />
+            )}
+
+            <span className={`relative z-10 text-sm font-medium ${isToday ? "bg-primary-600 text-white w-6 h-6 rounded-full flex items-center justify-center" : ""}`}>
               {formattedDate}
             </span>
+
+            {/* ✅ [추가된 디자인] 잔디 점 (일기 있으면 작은 점 표시) */}
+            {hasDiary && !isNotCurrentMonth && (
+              <div className="relative z-10 mt-1 w-1.5 h-1.5 bg-green-500 rounded-full" />
+            )}
           </div>
         );
         day = addDays(day, 1);
@@ -126,10 +179,7 @@ export default function CalendarPage() {
   };
 
   return (
-    // 🚨 [핵심 수정 1] h-full을 지우고, calc()로 높이를 강제 고정합니다.
-    // 100vh(전체화면) - 80px(헤더높이+여백) = 남은 공간 꽉 채우기
     <div className="h-[calc(100vh-160px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-
       {/* [왼쪽] 달력 영역 */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* 달력 헤더 */}
@@ -142,7 +192,7 @@ export default function CalendarPage() {
             <button onClick={nextMonth} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500">›</button>
           </div>
         </div>
-        
+
         {/* 달력 그리드 */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {renderDays()}
@@ -152,11 +202,8 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* [오른쪽] 일기 리스트 영역 */}
-      {/* 🚨 [핵심 수정 2] h-full과 overflow-hidden 필수 */}
+      {/* [오른쪽] 일기 리스트 영역 (원래 코드 그대로 유지) */}
       <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 bg-slate-50/50 flex flex-col h-[45%] md:h-full overflow-hidden">
-
-        {/* 리스트 헤더 (고정) */}
         <div className="px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0 z-10 shadow-sm h-[70px]">
           <div>
             <h3 className="text-sm font-bold text-slate-800">
@@ -174,8 +221,6 @@ export default function CalendarPage() {
           </button>
         </div>
 
-        {/* 리스트 스크롤 영역 */}
-        {/* 🚨 [핵심 수정 3] flex-1로 남은 공간 다 차지하고, 넘치면 여기서 스크롤(overflow-y-auto) */}
         <div className="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">불러오는 중...</div>
