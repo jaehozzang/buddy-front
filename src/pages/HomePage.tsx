@@ -90,16 +90,14 @@ const HomePage = () => {
   return (
     <div className="h-full flex flex-col bg-white overflow-y-auto">
 
-      {/* ✨ 메인 상단 영역 (VoiceChatPage와 사이즈/위치 싱크 맞춤) */}
+      {/* 메인 상단 영역 */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-8 gap-5 mt-6 relative z-10">
-        
+
         {/* 캐릭터 섹션 */}
         <div className="flex flex-col items-center relative">
-          
-          {/* 후광 효과 (사이즈 축소: w-64) */}
+
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary-100/60 rounded-full blur-3xl -z-10 pointer-events-none animate-pulse-slow"></div>
 
-          {/* 캐릭터 이미지 (VoiceChat과 동일하게 w-48 h-48) */}
           <div className="w-48 h-48 transition-transform hover:scale-105 duration-300">
             <img
               src={currentProfileImg}
@@ -108,7 +106,6 @@ const HomePage = () => {
             />
           </div>
 
-          {/* 멘트 (VoiceChat과 폰트 크기 통일: text-xl) */}
           <div className="text-center mt-5 space-y-1 animate-fade-in-up">
             <h1 className="text-xl font-bold text-slate-800 leading-snug">
               <span className="text-primary-600">{user?.nickname || "친구"}</span>, 안녕!<br />
@@ -120,7 +117,6 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* VoiceChat 버튼 (비율에 맞춰 살짝 컴팩트하게 조정) */}
         <button
           onClick={() => navigate('/app/voice-chat')}
           className="w-full max-w-[280px] bg-primary-600 hover:bg-primary-700 text-white text-base font-bold py-3.5 rounded-2xl shadow-lg shadow-primary-200 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 mt-3"
@@ -130,7 +126,7 @@ const HomePage = () => {
         </button>
       </main>
 
-      {/* 하단 위젯 섹션 (기존 유지) */}
+      {/* 하단 위젯 섹션 */}
       <section className="bg-primary-50/50 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)] p-6 pb-10 space-y-8 animate-slide-in-bottom relative z-20 border-t border-primary-100/50">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -151,7 +147,7 @@ const HomePage = () => {
                 </div>
               ) : recentDiaries.length > 0 ? (
                 recentDiaries.map((diary) => {
-                  const d = diary as any;
+                  const d = diary as any; // ✨ 여기서 d를 any로 선언
                   const imgList = d.images || [];
                   const singleImg = d.imageUrl || d.thumbnail;
                   let previewUrl = null;
@@ -181,16 +177,17 @@ const HomePage = () => {
                             <img src={previewUrl} alt="thumb" className="w-full h-full object-cover" />
                           </div>
                           <h4 className="font-bold text-slate-700 text-xs w-full truncate">
-                            {diary.title}
+                            {d.title} {/* diary.title -> d.title로 변경 */}
                           </h4>
                         </>
                       ) : (
                         <>
                           <h4 className="font-bold text-slate-700 text-xs w-full truncate mb-1">
-                            {diary.title}
+                            {d.title} {/* diary.title -> d.title로 변경 */}
                           </h4>
                           <p className="text-[10px] text-slate-400 w-full line-clamp-3 leading-relaxed opacity-90 break-all">
-                            {diary.summary || diary.content}
+                            {/* 🔥 [수정됨] diary.content 대신 d.content 사용 (TypeScript 에러 해결) */}
+                            {d.summary || d.content}
                           </p>
                         </>
                       )}
