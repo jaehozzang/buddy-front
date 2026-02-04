@@ -212,7 +212,7 @@ export default function SettingsPage() {
           <div className="bg-slate-50 rounded-2xl p-6 space-y-6 border border-slate-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-slate-700">로그 아웃</p>
+                <p className="text-sm font-bold text-slate-700">로그아웃</p>
                 <p className="text-xs text-slate-400 mt-0.5">기기에서 접속을 종료합니다.</p>
               </div>
               <button
