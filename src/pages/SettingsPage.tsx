@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { userApi } from "../api/userApi";
 import { IS_TEST_MODE } from "../config";
@@ -6,22 +6,47 @@ import { IS_TEST_MODE } from "../config";
 export default function SettingsPage() {
   const { user, logout, updateUserInfo } = useAuthStore();
 
-  // 입력 모드 상태 (어떤 항목을 수정 중인지)
+  // 입력 모드 상태
   const [editingField, setEditingField] = useState<"nickname" | "buddyName" | null>(null);
   const [inputValue, setInputValue] = useState("");
 
-  // 캐릭터 매핑
+  // 캐릭터 변경을 위한 '임시 선택' 상태
+  const [selectedCharSeq, setSelectedCharSeq] = useState<number>(user?.characterSeq || 1);
+
+  // 유저 정보가 로드되면 선택 상태 동기화
+  useEffect(() => {
+    if (user?.characterSeq) {
+      setSelectedCharSeq(user.characterSeq);
+    }
+  }, [user]);
+
+  // 캐릭터 데이터
   const characters = [
-    { seq: 1, name: "햄스터", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png" },
-    { seq: 2, name: "여우", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png" },
-    { seq: 3, name: "판다", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png" },
+    { 
+      seq: 1, 
+      name: "햄스터", 
+      desc: "작은 일도 놓치지 않고 꼼꼼하게 기록해주는 성실한 햄스터예요!", 
+      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png" 
+    },
+    { 
+      seq: 2, 
+      name: "여우", 
+      desc: "당신의 하루를 지혜롭고 센스 있게 정리해주는 똑똑한 여우예요.", 
+      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png" 
+    },
+    { 
+      seq: 3, 
+      name: "판다", 
+      desc: "느긋한 마음으로 당신의 고민을 들어주는 다정한 판다예요.", 
+      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png" 
+    },
   ];
 
-  // 현재 내 캐릭터 이미지 찾기
   const myCharacter = characters.find(c => c.seq === user?.characterSeq) || characters[0];
+  const selectedCharacterInfo = characters.find(c => c.seq === selectedCharSeq) || characters[0];
 
 
-  // ✨ 1. 닉네임 / 버디 이름 수정 핸들러
+  // 1. 닉네임 / 버디 이름 수정 핸들러
   const handleEditStart = (field: "nickname" | "buddyName", currentVal: string) => {
     setEditingField(field);
     setInputValue(currentVal);
@@ -33,8 +58,7 @@ export default function SettingsPage() {
     try {
       if (editingField === "nickname") {
         if (IS_TEST_MODE) {
-          console.log("[TEST] 닉네임 변경:", inputValue);
-          updateUserInfo({ nickname: inputValue }); // 로컬 스토어 업데이트
+          updateUserInfo({ nickname: inputValue });
         } else {
           await userApi.updateNickname(inputValue);
           updateUserInfo({ nickname: inputValue });
@@ -42,7 +66,6 @@ export default function SettingsPage() {
       }
       else if (editingField === "buddyName") {
         if (IS_TEST_MODE) {
-          console.log("[TEST] 버디 이름 변경:", inputValue);
           updateUserInfo({ characterNickname: inputValue });
         } else {
           await userApi.updateBuddyName(inputValue);
@@ -57,20 +80,18 @@ export default function SettingsPage() {
   };
 
 
-  // ✨ 2. 캐릭터 종류 변경 핸들러
-  const handleCharacterChange = async (seq: number) => {
-    if (user?.characterSeq === seq) return; // 같은 거 누르면 무시
-
-    if (!window.confirm("캐릭터를 변경하시겠습니까?")) return;
+  // 2. 캐릭터 저장 핸들러
+  const handleCharacterSave = async () => {
+    if (user?.characterSeq === selectedCharSeq) return;
 
     try {
       if (IS_TEST_MODE) {
-        console.log("[TEST] 캐릭터 변경:", seq);
-        updateUserInfo({ characterSeq: seq });
+        updateUserInfo({ characterSeq: selectedCharSeq });
       } else {
-        await userApi.updateCharacterType(seq);
-        updateUserInfo({ characterSeq: seq });
+        await userApi.updateCharacterType(selectedCharSeq);
+        updateUserInfo({ characterSeq: selectedCharSeq });
       }
+      alert("캐릭터가 변경되었습니다! 🎉");
     } catch (error) {
       console.error("캐릭터 변경 실패", error);
       alert("캐릭터 변경에 실패했습니다.");
@@ -94,10 +115,9 @@ export default function SettingsPage() {
           <p className="text-slate-500 text-sm mt-2">나와 버디의 정보를 설정해보세요.</p>
         </div>
 
-        {/* 1. 프로필 정보 (수정 가능) */}
+        {/* 1. 프로필 정보 */}
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12 pb-12 border-b border-slate-100">
 
-          {/* 캐릭터 이미지 */}
           <div className="relative group">
             <div className="w-32 h-32 rounded-full bg-slate-50 border border-slate-100 p-4 shadow-sm flex items-center justify-center">
               <img
@@ -114,11 +134,9 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex-1 w-full space-y-6">
-
-            {/* 닉네임 수정 */}
+            {/* 닉네임 */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-slate-400 uppercase">My Nickname</label>
-
               {editingField === "nickname" ? (
                 <div className="flex gap-2">
                   <input
@@ -133,17 +151,18 @@ export default function SettingsPage() {
                   <button onClick={() => setEditingField(null)} className="text-sm text-slate-400 hover:text-slate-600">취소</button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 group cursor-pointer" onClick={() => handleEditStart("nickname", user?.nickname || "")}>
+                <div className="flex items-center gap-2 group cursor-pointer w-fit" onClick={() => handleEditStart("nickname", user?.nickname || "")}>
                   <h3 className="text-2xl font-bold text-slate-800">{user?.nickname}</h3>
-                  <span className="opacity-0 group-hover:opacity-100 text-slate-300 text-sm transition-opacity">✎ 수정</span>
+                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary-600 text-sm font-bold transition-all transform group-hover:translate-x-1">
+                    ✎ 수정
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* 버디 이름 수정 */}
+            {/* 버디 이름 */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-slate-400 uppercase">Buddy's Name</label>
-
               {editingField === "buddyName" ? (
                 <div className="flex gap-2">
                   <input
@@ -158,48 +177,74 @@ export default function SettingsPage() {
                   <button onClick={() => setEditingField(null)} className="text-sm text-slate-400 hover:text-slate-600">취소</button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 group cursor-pointer" onClick={() => handleEditStart("buddyName", user?.characterNickname || "")}>
+                <div className="flex items-center gap-2 group cursor-pointer w-fit" onClick={() => handleEditStart("buddyName", user?.characterNickname || "")}>
                   <p className="text-lg font-medium text-primary-600">{user?.characterNickname}</p>
-                  <span className="opacity-0 group-hover:opacity-100 text-slate-300 text-sm transition-opacity">✎ 수정</span>
+                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary-600 text-sm font-bold transition-all transform group-hover:translate-x-1">
+                    ✎ 수정
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* 이메일 (수정 불가) */}
+            {/* 이메일 */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-slate-400 uppercase">Account Email</label>
               <p className="text-sm text-slate-500 font-mono bg-slate-50 inline-block px-3 py-1.5 rounded-lg w-fit">
                 {user?.email}
               </p>
             </div>
-
           </div>
         </div>
 
-        {/* 2. 캐릭터 종류 변경 */}
+        {/* 2. 캐릭터 변경 */}
         <div className="mb-12 pb-12 border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
             <span>🎭</span> 캐릭터 변경
           </h3>
-          <div className="flex flex-wrap gap-4">
-            {characters.map((char) => (
-              <button
-                key={char.seq}
-                onClick={() => handleCharacterChange(char.seq)}
-                className={`w-20 h-20 p-3 rounded-2xl transition-all duration-200 border relative
-                  ${user?.characterSeq === char.seq
-                    ? "bg-primary-50 border-primary-500 ring-2 ring-primary-100 scale-105"
-                    : "bg-white border-slate-200 hover:border-primary-300 hover:shadow-md grayscale hover:grayscale-0 opacity-70 hover:opacity-100"
-                  }`}
-              >
-                <img src={char.img} alt={char.name} className="w-full h-full object-contain" />
-                {user?.characterSeq === char.seq && (
-                  <div className="absolute -top-2 -right-2 bg-primary-600 text-white rounded-full p-1 w-5 h-5 flex items-center justify-center text-[10px]">
-                    ✓
-                  </div>
-                )}
-              </button>
-            ))}
+          
+          <div className="flex flex-col items-center">
+            <div className="flex flex-wrap justify-center gap-4 mb-6">
+              {characters.map((char) => (
+                <button
+                  key={char.seq}
+                  onClick={() => setSelectedCharSeq(char.seq)}
+                  className={`w-24 h-24 p-3 rounded-2xl transition-all duration-200 border relative flex flex-col items-center justify-center
+                    ${selectedCharSeq === char.seq
+                      ? "bg-primary-50 border-primary-500 ring-4 ring-primary-100 scale-105 z-10"
+                      : "bg-white border-slate-200 hover:border-primary-300 hover:shadow-md opacity-70 hover:opacity-100"
+                    }`}
+                >
+                  <img src={char.img} alt={char.name} className="w-14 h-14 object-contain mb-1" />
+                  <span className={`text-xs font-bold ${selectedCharSeq === char.seq ? "text-primary-700" : "text-slate-500"}`}>
+                    {char.name}
+                  </span>
+                  
+                  {user?.characterSeq === char.seq && (
+                    <div className="absolute -top-2 -right-2 bg-slate-800 text-white rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm">
+                      사용중
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 w-full text-center border border-slate-100 mb-4 animate-[fade-in_0.3s]">
+               <p className="text-sm text-slate-600 font-medium">
+                 "<span className="text-primary-600 font-bold">{selectedCharacterInfo.name}</span>"는 {selectedCharacterInfo.desc}
+               </p>
+            </div>
+
+            <button 
+              onClick={handleCharacterSave}
+              disabled={user?.characterSeq === selectedCharSeq}
+              className={`w-full py-3 rounded-xl font-bold text-sm transition-all
+                ${user?.characterSeq === selectedCharSeq 
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                  : "bg-primary-600 text-white hover:bg-primary-700 shadow-md shadow-primary-200 hover:shadow-lg active:scale-[0.98]"
+                }`}
+            >
+              {user?.characterSeq === selectedCharSeq ? "현재 적용된 캐릭터입니다" : "이 캐릭터로 변경하기"}
+            </button>
           </div>
         </div>
 
@@ -210,6 +255,7 @@ export default function SettingsPage() {
           </h3>
 
           <div className="bg-slate-50 rounded-2xl p-6 space-y-6 border border-slate-100">
+            {/* 로그아웃 버튼 */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-700">로그아웃</p>
@@ -219,12 +265,13 @@ export default function SettingsPage() {
                 onClick={handleLogout}
                 className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100 transition"
               >
-                LOGOUT
+                로그아웃
               </button>
             </div>
 
             <div className="h-px bg-slate-200" />
 
+            {/* ✅ 회원 탈퇴 버튼 (디자인 수정됨: LOGOUT과 같은 형태 but RED) */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-red-500">회원 탈퇴</p>
@@ -232,7 +279,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => alert("탈퇴 기능은 고객센터에 문의해주세요. (준비중)")}
-                className="text-xs font-bold text-red-500 underline decoration-red-200 hover:decoration-red-500 hover:text-red-600 transition underline-offset-4"
+                className="text-xs font-bold text-red-500 bg-white border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50 transition"
               >
                 탈퇴하기
               </button>
