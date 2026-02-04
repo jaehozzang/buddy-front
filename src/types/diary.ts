@@ -1,47 +1,54 @@
 // src/types/diary.ts
 
-// 1. 일기 목록 조회용 (CalendarPage 리스트)
+// 1. 일기 목록 조회용 (CalendarPage, HomePage 리스트)
 export interface DiarySummary {
     diarySeq: number;
     title: string;
     summary: string;
-    createAt: string; // ✨ 명세서 기준 (t 없음)
+    createAt: string; // ✨ 명세서 기준
 
-    // 태그가 ["태그1", "태그2"] 문자열 배열로 올 수도 있고, 객체로 올 수도 있어 둘 다 허용
-    tags: string[] | { tagSeq: number; name: string }[];
+    // ✨ [핵심 해결] Vercel 에러 해결을 위해 명시적으로 추가
+    // 목록 조회 시 내용이 없을 수도 있으므로 ?(optional) 처리 추천
+    content?: string;
 
-    // ✨ 리스트 썸네일용 (백엔드가 어떻게 줄지 몰라 유연하게 설정)
+    // ✨ [HomePage 오류 방지] HomePage에서 date, diaryDate 등을 체크하므로 추가
+    date?: string;
+    diaryDate?: string;
+    createdAt?: string;
+
+    // 태그 (문자열 또는 객체 허용)
+    tags?: string[] | { tagSeq: number; name: string }[];
+
+    // 이미지 (유연하게 허용)
     images?: { url: string }[] | string[];
     thumbnail?: string;
+    imageUrl?: string; // 가끔 imageUrl로 들어오는 경우 대비
 }
 
 // 2. 일기 상세 조회용 (DiaryViewPage 뷰어)
 export interface DiaryDetail {
-    createAt: string;
     diarySeq: number;
     title: string;
     content: string;
 
-    createdAt: string; // ✨ 명세서 기준 (t 있음)
-    diaryDate?: string; // 사용자가 지정한 날짜 (없으면 createdAt 사용)
+    createAt?: string; // 오타 방지용 허용
+    createdAt: string; // ✨ 명세서 기준
+    diaryDate?: string; // 사용자가 지정한 날짜
 
-    // 상세에선 태그가 객체 배열이라고 하셨지만, 코드 안전성을 위해 유연하게
     tags: {
         tagSeq?: number;
         name: string;
     }[];
 
-    // ✨ 뷰어에서 맵(.map)을 돌리기 위해 배열로 선언
-    // 백엔드가 imageUrl 하나만 준다면, 프론트에서 변환하거나 이 타입을 맞춰야 함
     images?: { url: string }[] | string[];
-    imageUrl?: string; // 레거시 호환용
+    imageUrl?: string;
 }
 
 // 3. 일기 생성/수정 요청
 export interface CreateDiaryRequest {
     title: string;
     content: string;
-    diaryDate?: string; // 날짜 지정 가능하도록 추가
+    diaryDate?: string;
     imageUrl?: string;
     tags: string[];
 }
