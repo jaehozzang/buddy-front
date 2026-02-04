@@ -17,6 +17,7 @@ export interface DiarySummary {
 
 // 2. 일기 상세 조회용 (DiaryViewPage 뷰어)
 export interface DiaryDetail {
+    createAt: string;
     diarySeq: number;
     title: string;
     content: string;

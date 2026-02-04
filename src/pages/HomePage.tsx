@@ -1,28 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { format, getYear, getMonth, subMonths } from "date-fns";
 import { useAuthStore } from "../store/useAuthStore";
-import { chatApi } from "../api/chatApi";
-import { IS_TEST_MODE } from "../config";
-
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
+import { diaryApi, type DailyDiaryCount } from "../api/diaryApi";
+import type { DiarySummary } from "../types/diary";
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  // 상태 관리
-  const [sessionId, setSessionId] = useState<number>(0);
-  const [isListening, setIsListening] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [myTranscript, setMyTranscript] = useState("마이크 버튼을 눌러 대화를 시작해보세요.");
-  const [aiMessage, setAiMessage] = useState(`안녕, ${user?.nickname || "친구"}! 오늘 하루는 어땠어?`);
+  const [recentDiaries, setRecentDiaries] = useState<DiarySummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef("");
-
+  // 캐릭터 이미지
   const getCharacterType = (seq?: number) => {
     switch (seq) {
       case 1: return "hamster";
@@ -41,166 +31,208 @@ const HomePage = () => {
   };
   const currentProfileImg = characterImages[characterType] || characterImages.rabbit;
 
-  // 🗣️ TTS 기능
-  const speak = (text: string) => {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "ko-KR";
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // 🚀 메시지 전송 로직
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
-    setIsLoading(true);
-
-    try {
-      let aiReply = "";
-
-      if (IS_TEST_MODE) {
-        console.log(`[TEST] 전송: "${text}"`);
-        await new Promise(r => setTimeout(r, 1500));
-        aiReply = `[테스트] 너는 방금 "${text}"라고 말했어!`;
-        if (sessionId === 0) setSessionId(999);
-      } else {
-        const response = await chatApi.sendMessage({
-          sessionId: sessionId,
-          content: text
-        });
-        aiReply = response.result.content;
-
-        if (response.result.sessionId && response.result.sessionId !== sessionId) {
-          setSessionId(response.result.sessionId);
-        }
-      }
-
-      setAiMessage(aiReply);
-      speak(aiReply);
-
-    } catch (error) {
-      setAiMessage("서버 연결이 불안정해요. 😢");
-    } finally {
-      setIsLoading(false);
-      setMyTranscript("마이크 버튼을 눌러 대답하기");
-    }
-  };
-
+  // 최근 일기 로직
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setMyTranscript("이 브라우저는 음성 인식을 지원하지 않아요.");
-      return;
-    }
+    const fetchRecentDiaries = async () => {
+      try {
+        let targetDate = new Date();
+        let collectedDiaries: DiarySummary[] = [];
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = "ko-KR";
-    recognition.continuous = false;
-    recognition.interimResults = true;
+        for (let i = 0; i < 3; i++) {
+          if (collectedDiaries.length >= 3) break;
 
-    recognition.onstart = () => {
-      setIsListening(true);
-      transcriptRef.current = "";
-    };
+          const year = getYear(targetDate);
+          const month = getMonth(targetDate) + 1;
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setMyTranscript(transcript);
-      transcriptRef.current = transcript;
-    };
+          const countRes = await diaryApi.getMonthlyDiaryCounts(year, month);
 
-    recognition.onend = () => {
-      setIsListening(false);
-      if (transcriptRef.current.trim().length > 0) {
-        handleSendMessage(transcriptRef.current);
+          if (countRes?.result && Array.isArray(countRes.result)) {
+            const activeDays = countRes.result
+              .filter((item: DailyDiaryCount) => item.count > 0)
+              .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            const daysToFetch = activeDays.slice(0, 3);
+
+            const promises = daysToFetch.map((dayItem: DailyDiaryCount) =>
+              diaryApi.getDiariesByDate(dayItem.date)
+            );
+
+            const results = await Promise.all(promises);
+
+            for (const res of results) {
+              if (res?.result) {
+                collectedDiaries = [...collectedDiaries, ...res.result];
+              }
+            }
+          }
+          targetDate = subMonths(targetDate, 1);
+        }
+
+        if (collectedDiaries.length > 0) {
+          const sorted = collectedDiaries.sort((a: any, b: any) => {
+            const dateA = new Date(a.date || a.diaryDate || a.createdAt || a.createAt).getTime();
+            const dateB = new Date(b.date || b.diaryDate || b.createdAt || b.createAt).getTime();
+            return dateB - dateA;
+          });
+          setRecentDiaries(sorted.slice(0, 3));
+        }
+
+      } catch (error) {
+        console.error("최근 일기 로드 실패", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    recognitionRef.current = recognition;
-  }, [sessionId]);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current || isLoading) return;
-
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      setMyTranscript("듣고 있어요... 👂");
-      recognitionRef.current.start();
-    }
-  };
+    fetchRecentDiaries();
+  }, []);
 
   return (
-    <div className="h-full flex flex-col items-center bg-white relative overflow-hidden">
+    <div className="h-full flex flex-col bg-white overflow-y-auto">
 
-      {/* 1. 상단 텍스트 (이전 디자인 복구: 말풍선 제거, 심플한 텍스트) */}
-      <div className="mt-4 px-8 text-center animate-[fade-in-down_0.5s]">
-        <h2 className="text-xl font-bold text-slate-800 leading-snug">
-          {isLoading ? "생각하는 중... 🤔" : aiMessage}
-        </h2>
-      </div>
+      {/* ✨ 메인 상단 영역 (VoiceChatPage와 사이즈/위치 싱크 맞춤) */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8 gap-5 mt-6 relative z-10">
+        
+        {/* 캐릭터 섹션 */}
+        <div className="flex flex-col items-center relative">
+          
+          {/* 후광 효과 (사이즈 축소: w-64) */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary-100/60 rounded-full blur-3xl -z-10 pointer-events-none animate-pulse-slow"></div>
 
-      {/* 2. 캐릭터 이미지 (bounce 효과 등은 로직상 필요해서 최소한만 남김) */}
-      <div className="flex-1 flex items-center justify-center w-full relative mt-8 pb-8">
-        {isListening && (
-          <>
-            <div className="absolute w-56 h-56 bg-primary-100 rounded-full animate-ping opacity-20"></div>
-            <div className="absolute w-40 h-40 bg-primary-200 rounded-full animate-pulse opacity-30"></div>
-          </>
-        )}
+          {/* 캐릭터 이미지 (VoiceChat과 동일하게 w-48 h-48) */}
+          <div className="w-48 h-48 transition-transform hover:scale-105 duration-300">
+            <img
+              src={currentProfileImg}
+              alt="Buddy"
+              className="w-full h-full object-contain drop-shadow-xl"
+            />
+          </div>
 
-        <div className={`relative w-48 h-48 transition-transform duration-500 
-          ${isListening ? "scale-110" : "scale-100"}
-          ${isLoading ? "animate-bounce" : ""}
-        `}>
-          <img
-            src={currentProfileImg}
-            alt="character"
-            className="w-full h-full object-contain drop-shadow-xl"
-          />
-        </div>
-      </div>
-
-      {/* 3. 하단 컨트롤 영역 (이전 디자인 복구: bg-slate-50, 마이크 크기 원복) */}
-      <div className="w-[calc(100%-2rem)] mx-auto mb-4 bg-slate-50 rounded-[2.5rem] shadow-lg p-6 flex flex-col items-center gap-5 pb-8">
-
-        {/* 텍스트 박스 */}
-        <div className="w-full min-h-[50px] max-h-[90px] overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 text-center flex items-center justify-center">
-          <p className={`text-sm font-medium leading-relaxed ${isListening ? "text-primary-600" : "text-slate-700"}`}>
-            {isListening ? `"${myTranscript}"` : myTranscript}
-          </p>
+          {/* 멘트 (VoiceChat과 폰트 크기 통일: text-xl) */}
+          <div className="text-center mt-5 space-y-1 animate-fade-in-up">
+            <h1 className="text-xl font-bold text-slate-800 leading-snug">
+              <span className="text-primary-600">{user?.nickname || "친구"}</span>, 안녕!<br />
+              오늘 하루는 어땠어?
+            </h1>
+            <p className="text-slate-400 text-sm mt-2">
+              너의 이야기를 들려줘, 내가 들어줄게!
+            </p>
+          </div>
         </div>
 
-        {/* 마이크 버튼 (크기 원복: w-16 h-16) */}
+        {/* VoiceChat 버튼 (비율에 맞춰 살짝 컴팩트하게 조정) */}
         <button
-          onClick={toggleListening}
-          disabled={isLoading}
-          className={`relative w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg transition-all duration-300 transform active:scale-95
-            ${isLoading
-              ? "bg-slate-300 cursor-not-allowed text-slate-500"
-              : isListening
-                ? "bg-red-500 text-white shadow-red-200 ring-4 ring-red-100 rotate-180"
-                : "bg-primary-600 text-white shadow-primary-200 hover:bg-primary-700 hover:-translate-y-1"
-            }
-          `}
+          onClick={() => navigate('/app/voice-chat')}
+          className="w-full max-w-[280px] bg-primary-600 hover:bg-primary-700 text-white text-base font-bold py-3.5 rounded-2xl shadow-lg shadow-primary-200 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 mt-3"
         >
-          {isLoading ? "⏳" : (isListening ? "⏹" : "🎙️")}
+          <span>Buddy와 대화 시작하기</span>
+          <span className="text-lg">🎙️</span>
         </button>
+      </main>
 
-        <p className="text-xs text-slate-400 font-medium">
-          {isLoading ? "대답을 준비하고 있어요" : (isListening ? "말이 끝나면 전송돼요" : "터치해서 말하기")}
-        </p>
-      </div>
+      {/* 하단 위젯 섹션 (기존 유지) */}
+      <section className="bg-primary-50/50 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)] p-6 pb-10 space-y-8 animate-slide-in-bottom relative z-20 border-t border-primary-100/50">
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+          {/* 1. 최근 일기 위젯 */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center px-1">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-1">
+                📒 최근 기록
+              </h3>
+              <button onClick={() => navigate('/app/calendar')} className="text-xs text-primary-500 hover:text-primary-700 font-medium bg-white px-2 py-1 rounded-lg shadow-sm border border-primary-100">전체보기</button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 h-28">
+              {loading ? (
+                <div className="col-span-3 flex items-center justify-center text-slate-400 text-sm bg-white rounded-2xl border border-dashed border-primary-200">
+                  로딩 중...
+                </div>
+              ) : recentDiaries.length > 0 ? (
+                recentDiaries.map((diary) => {
+                  const d = diary as any;
+                  const imgList = d.images || [];
+                  const singleImg = d.imageUrl || d.thumbnail;
+                  let previewUrl = null;
+                  if (Array.isArray(imgList) && imgList.length > 0) {
+                    const firstItem = imgList[0];
+                    previewUrl = typeof firstItem === 'string' ? firstItem : firstItem.url;
+                  } else if (singleImg) {
+                    previewUrl = singleImg;
+                  }
+
+                  const dateStr = d.date || d.diaryDate || d.createdAt || d.createAt;
+                  const displayDate = dateStr ? new Date(dateStr) : new Date();
+
+                  return (
+                    <div
+                      key={diary.diarySeq}
+                      onClick={() => navigate(`/app/diary/${diary.diarySeq}`)}
+                      className="group bg-white rounded-2xl border border-primary-100 shadow-sm hover:shadow-md hover:border-primary-300 hover:-translate-y-0.5 transition-all cursor-pointer relative overflow-hidden flex flex-col p-3 items-start justify-start text-left"
+                    >
+                      <span className="text-[10px] font-bold text-primary-400 mb-1.5 z-10 bg-primary-50 px-1.5 py-0.5 rounded-md">
+                        {format(displayDate, "MM.dd")}
+                      </span>
+
+                      {previewUrl ? (
+                        <>
+                          <div className="w-full flex-1 rounded-lg overflow-hidden mb-1.5 bg-slate-50 border border-slate-100">
+                            <img src={previewUrl} alt="thumb" className="w-full h-full object-cover" />
+                          </div>
+                          <h4 className="font-bold text-slate-700 text-xs w-full truncate">
+                            {diary.title}
+                          </h4>
+                        </>
+                      ) : (
+                        <>
+                          <h4 className="font-bold text-slate-700 text-xs w-full truncate mb-1">
+                            {diary.title}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 w-full line-clamp-3 leading-relaxed opacity-90 break-all">
+                            {diary.summary || diary.content}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-3 flex flex-col items-center justify-center bg-white rounded-2xl border border-dashed border-primary-200 text-center">
+                  <p className="text-xs text-primary-400 font-medium">아직 작성된 일기가 없어요 🌱</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. 마음 리포트 위젯 */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center px-1">
+              <h3 className="text-base font-bold text-slate-800">📊 이번 주 마음 리포트</h3>
+              <button onClick={() => navigate('/app/report')} className="text-xs text-primary-500 hover:text-primary-700 font-medium bg-white px-2 py-1 rounded-lg shadow-sm border border-primary-100">분석 보기</button>
+            </div>
+            <div className="bg-white border border-primary-100 rounded-2xl p-5 flex justify-around items-center h-28 shadow-sm">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-3xl drop-shadow-sm filter grayscale-[0.2]">🔥</span>
+                <span className="text-xs font-bold text-slate-600">열정적</span>
+              </div>
+              <div className="w-[1px] h-10 bg-primary-100"></div>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-3xl drop-shadow-sm filter grayscale-[0.2]">😢</span>
+                <span className="text-xs font-bold text-slate-600">슬픔</span>
+              </div>
+              <div className="w-[1px] h-10 bg-primary-100"></div>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-3xl drop-shadow-sm filter grayscale-[0.2]">✨</span>
+                <span className="text-xs font-bold text-slate-600">평온</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
     </div>
   );
 };
 
 export default HomePage;
-
-
-/**
- * 광고를 보면 사료를 줌 -> 사료를 먹고 포만감이 어느정도 차있을때 대화가능 -> 
- * 대화를 나누며 애정과 관심을 줘서 관심도(?)등을 올림
- */

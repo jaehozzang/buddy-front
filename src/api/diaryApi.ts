@@ -1,7 +1,12 @@
-// src/api/diaryApi.ts
 import { authApi } from './axios';
 import type { AuthResponse } from '../types/auth';
 import type { DiarySummary, DiaryDetail } from '../types/diary';
+
+// ✨ [여기!] 이 부분이 없어서 에러가 난 겁니다. 꼭 추가해 주세요!
+export interface DailyDiaryCount {
+    date: string;  // "2026-02-04"
+    count: number; // 일기 개수
+}
 
 export const diaryApi = {
     // 1. 목록 조회
@@ -18,25 +23,18 @@ export const diaryApi = {
         return response.data;
     },
 
-    // 3. 일기 생성 (✨ 수정됨)
+    // 3. 일기 생성
     createDiary: async (data: FormData) => {
-        // 'Content-Type': undefined로 설정하면, 
-        // axios.ts에 있는 'application/json' 설정을 무시하고
-        // 브라우저가 자동으로 'multipart/form-data; boundary=...'를 채워줍니다.
         const response = await authApi.post<AuthResponse<number>>('/api/v1/diary', data, {
-            headers: {
-                "Content-Type": undefined
-            }
+            headers: { "Content-Type": undefined }
         });
         return response.data;
     },
 
-    // 4. 일기 수정 (✨ 수정됨)
+    // 4. 일기 수정
     updateDiary: async (diarySeq: number, data: FormData) => {
         const response = await authApi.patch<AuthResponse<number>>(`/api/v1/diary/${diarySeq}`, data, {
-            headers: {
-                "Content-Type": undefined
-            }
+            headers: { "Content-Type": undefined }
         });
         return response.data;
     },
@@ -47,21 +45,29 @@ export const diaryApi = {
         return response.data;
     },
 
-    // 6. AI 일기 생성 (✨ 수정 확인: sessionId를 객체로 감싸서 전송)
+    // 6. AI 일기 생성
     createDiaryFromChat: async (sessionId: number) => {
         const response = await authApi.post<AuthResponse<{
             title: string;
             content: string;
             tags: { tagSeq: number; name: string }[];
-        }>>('/api/v1/diary/from-chat', { sessionId }); // { sessionId: 123 } 형태로 전송
+        }>>('/api/v1/diary/from-chat', { sessionId });
         return response.data;
     },
 
-    // 7. 월간 조회
+    // 7. 월간 조회 (리스트용)
     getMonthlyDiaries: async (year: number, month: number) => {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-01`;
         const response = await authApi.get<AuthResponse<DiarySummary[]>>('/api/v1/diary', {
             params: { date: dateStr, type: 'MONTHLY' }
+        });
+        return response.data;
+    },
+
+    // ✨ 8. [신규 추가] 월별 일기 개수 조회 (잔디 심기용)
+    getMonthlyDiaryCounts: async (year: number, month: number) => {
+        const response = await authApi.get<AuthResponse<DailyDiaryCount[]>>('/api/v1/diary/calendar', {
+            params: { year, month }
         });
         return response.data;
     },

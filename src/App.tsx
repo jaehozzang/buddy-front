@@ -1,4 +1,3 @@
-// src/App.tsx
 import {
   Routes,
   Route,
@@ -17,7 +16,8 @@ import RegisterNicknamePage from "./pages/RegisterNicknamePage";
 import CharacterSelectPage from "./pages/CharacterSelectPage";
 
 import HomePage from "./pages/HomePage";
-import ChatPage from "./pages/ChatPage";
+import ChatPage from "./pages/ChatPage"; // 기존 텍스트 채팅
+import VoiceChatPage from "./pages/VoiceChatPage.tsx"; // 👈 새로 추가된 음성 채팅 페이지
 import CalendarPage from "./pages/CalendarPage";
 import DiaryPage from "./pages/DiaryPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -67,15 +67,18 @@ function App() {
           >
             <Route index element={<HomePage />} />
             <Route path="home" element={<HomePage />} />
-            <Route path="chat" element={<ChatPage />} />
+
+            {/* 👇 채팅 관련 라우트 */}
+            <Route path="chat" element={<ChatPage />} /> {/* 기존 텍스트 채팅 */}
+            <Route path="voice-chat" element={<VoiceChatPage />} /> {/* 👈 추가됨: 음성 채팅 */}
+
             <Route path="calendar" element={<CalendarPage />} />
-            {/* 👇 [수정 2] 일기 관련 라우팅 변경 👇 */}
-            {/* 1. 일기 쓰기 (새 글) */}
+
+            {/* 일기 관련 라우트 */}
             <Route path="diary/new" element={<DiaryPage mode="create" />} />
-            {/* 2. 일기 읽기 (뷰어 페이지) -> 여기로 먼저 연결됨! */}
             <Route path="diary/:id" element={<DiaryViewPage />} />
-            {/* 3. 일기 수정 (수정 페이지) -> /edit을 붙여서 구분 */}
             <Route path="diary/:id/edit" element={<DiaryPage mode="edit" />} />
+
             <Route path="settings" element={<SettingsPage />} />
             <Route path="report" element={<ReportPage />} />
           </Route>
