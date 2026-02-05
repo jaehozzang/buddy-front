@@ -19,11 +19,9 @@ import HomePage from "./pages/HomePage";
 import ChatPage from "./pages/ChatPage"; // 기존 텍스트 채팅
 import VoiceChatPage from "./pages/VoiceChatPage.tsx"; // 👈 새로 추가된 음성 채팅 페이지
 import CalendarPage from "./pages/CalendarPage";
-import DiaryPage from "./pages/DiaryPage";
 import SettingsPage from "./pages/SettingsPage";
 import MainLayout from "./MainLayout";
 import ReportPage from "./pages/ReportPage";
-import DiaryViewPage from "./pages/DiaryViewPage";
 
 function App() {
   const location = useLocation();
@@ -73,11 +71,6 @@ function App() {
             <Route path="voice-chat" element={<VoiceChatPage />} /> {/* 👈 추가됨: 음성 채팅 */}
 
             <Route path="calendar" element={<CalendarPage />} />
-
-            {/* 일기 관련 라우트 */}
-            <Route path="diary/new" element={<DiaryPage mode="create" />} />
-            <Route path="diary/:id" element={<DiaryViewPage />} />
-            <Route path="diary/:id/edit" element={<DiaryPage mode="edit" />} />
 
             <Route path="settings" element={<SettingsPage />} />
             <Route path="report" element={<ReportPage />} />
