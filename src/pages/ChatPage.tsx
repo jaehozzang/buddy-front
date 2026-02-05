@@ -167,23 +167,29 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
         }
     };
 
+    // 🚀 [수정] 대화 종료 핸들러
     const handleEndConversation = async () => {
         if (messages.length < 2) {
             alert("일기를 쓰기엔 대화가 너무 짧아요!");
             return;
         }
+
         if (sessionId === 0) {
-            alert("저장된 대화 내용이 없습니다.");
+            alert("서버와 연결된 대화 내용이 없습니다.");
             return;
         }
 
-        // 일기 작성 페이지로 이동
+        // 1. 일기 작성 페이지로 이동 (데이터는 state로 넘겨줌)
         navigate("/app/diary/new", {
             state: {
-                sessionId: sessionId,
+                sessionId: sessionId, // 현재 세션 ID를 넘겨줌
                 date: new Date().toISOString().split("T")[0]
             }
         });
+
+        // ✨ [핵심 추가] 이동 후에는 '전역 스토어'의 세션 ID를 초기화!
+        // 그래야 다음에 다시 채팅 들어왔을 때 새 방(0번)으로 시작함
+        setSessionId(0);
     };
 
     return (
