@@ -18,6 +18,10 @@ export default function DiaryViewPage() {
             if (!id || isNaN(Number(id))) return;
             try {
                 const response = await diaryApi.getDiaryDetail(Number(id));
+
+                // 🔍 [디버깅용]
+                console.log("📌 백엔드 응답 데이터:", response.result);
+
                 if (response && response.result) {
                     setDiary(response.result);
                 } else {
@@ -51,49 +55,61 @@ export default function DiaryViewPage() {
     // 3. 수정 핸들러
     const handleEdit = () => {
         if (!id || !diary) return;
-        const targetDate = diary.diaryDate || diary.createAt || diary.createdAt;
+        const targetDate = diary.diaryDate || diary.createdAt;
         navigate(`/app/diary/${id}/edit`, {
             state: { mode: "edit", date: targetDate }
         });
     };
 
-    // 🕒 실제 작성 시간 표시 함수
+    // 🕒 '작성 시간' 표시 함수
     const getCreatedTimeDisplay = () => {
-        const dateStr = diary?.createdAt || diary?.createAt;
+        if (!diary) return "";
+        const dateStr = diary.createdAt || diary.createAt;
         if (!dateStr) return "";
 
-        const date = new Date(dateStr);
-        const now = new Date();
-        const hoursDiff = differenceInHours(now, date);
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return "";
 
-        if (hoursDiff < 24) {
-            return formatDistanceToNow(date, { addSuffix: true, locale: ko });
+            const now = new Date();
+            const hoursDiff = differenceInHours(now, date);
+
+            if (hoursDiff < 24) {
+                // 24시간 미만: "3시간 전" (기존 유지)
+                return formatDistanceToNow(date, { addSuffix: true, locale: ko });
+            }
+            // ✨ [수정됨] 24시간 이상: "2024.02.05" 날짜 표시
+            return format(date, "yyyy.MM.dd");
+        } catch {
+            return "";
         }
-        // 24시간 지났으면 날짜 대신 시간만 보여주거나, 간단하게 날짜 표시
-        return format(date, "yyyy.MM.dd");
     };
 
-    // 로딩 UI
-    if (loading || !diary) {
+    if (loading) {
         return (
             <div className="h-[calc(100vh-120px)] flex items-center justify-center bg-white rounded-2xl border border-slate-200 shadow-sm">
-                <div className="text-slate-400 animate-pulse">{loading ? "로딩 중..." : "일기가 없습니다."}</div>
+                <div className="text-slate-400 animate-pulse">로딩 중...</div>
             </div>
         );
     }
 
-    // 헤더 날짜 (기록일)
-    const headerDateStr = diary.diaryDate || diary.createdAt || diary.createAt;
-    const headerDate = headerDateStr ? new Date(headerDateStr) : new Date();
+    if (!diary) return null;
 
-    const hasImages = (diary.images && diary.images.length > 0) || !!diary.imageUrl;
+    // 헤더 날짜 결정 로직
+    let headerDateObj = new Date();
+    if (diary.diaryDate) {
+        headerDateObj = new Date(diary.diaryDate);
+    } else if (diary.createdAt || diary.createAt) {
+        headerDateObj = new Date(diary.createdAt || diary.createAt || "");
+    }
+
+    const hasImages = !!diary.imageUrl || (diary.images?.length ?? 0) > 0;
 
     return (
         <div className="h-[calc(100vh-120px)] flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
 
             {/* 헤더 */}
             <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
-                {/* 뒤로가기 */}
                 <button
                     onClick={() => navigate("/app/calendar")}
                     className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
@@ -101,14 +117,17 @@ export default function DiaryViewPage() {
                     ←
                 </button>
 
-                {/* 날짜 표시 */}
-                <div className="font-bold text-slate-800 text-lg absolute left-1/2 transform -translate-x-1/2">
-                    {format(headerDate, "yyyy년 MM월 dd일")}
+                {/* 중앙 날짜 표시 */}
+                <div className="font-bold text-slate-800 text-lg absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center leading-tight">
+                    <span>{format(headerDateObj, "yyyy년 MM월 dd일")}</span>
+                    <span className="text-[10px] text-primary-500 font-medium">
+                        {format(headerDateObj, "EEEE", { locale: ko })}
+                    </span>
                 </div>
 
-                {/* ✨ 우측 상단 그룹 (작성시간 + 수정 + 삭제) */}
+                {/* 우측 상단 버튼 그룹 */}
                 <div className="flex items-center gap-2">
-                    {/* ✨ 작성 시간 (버튼 왼쪽으로 이동) */}
+                    {/* 작성 시간 (오른쪽 상단엔 언제 썼는지가 나옵니다) */}
                     <span className="text-[11px] text-slate-400 font-medium mr-2 hidden md:block">
                         {getCreatedTimeDisplay()} 작성
                     </span>
@@ -116,7 +135,7 @@ export default function DiaryViewPage() {
                     {/* 수정 버튼 */}
                     <button
                         onClick={handleEdit}
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-green-500 hover:bg-green-50 transition"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-green-600 hover:bg-green-50 transition"
                         title="수정하기"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -137,45 +156,43 @@ export default function DiaryViewPage() {
                 </div>
             </div>
 
-            {/* 메인 콘텐츠 */}
+            {/* 본문 영역 */}
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                {/* [왼쪽] 사진 영역 */}
+                {/* 왼쪽: 사진 */}
                 {hasImages && (
                     <div className="w-full md:w-[400px] bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                         <div className="text-xs font-bold text-slate-400 mb-1 text-center md:text-left">Photo Log</div>
-                        {diary.images && diary.images.length > 0 ? (
-                            diary.images.map((img: any, idx: number) => {
-                                const imgUrl = typeof img === 'string' ? img : img.url;
+                        {diary.imageUrl ? (
+                            <div className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                                <img src={diary.imageUrl} alt="main" className="w-full h-auto object-contain" />
+                            </div>
+                        ) : (
+                            diary.images?.map((img: any, idx: number) => {
+                                const url = typeof img === 'string' ? img : img.url;
                                 return (
                                     <div key={idx} className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                                        <img src={imgUrl} alt={`img-${idx}`} className="w-full h-auto object-contain" />
+                                        <img src={url} alt={`img-${idx}`} className="w-full h-auto object-contain" />
                                     </div>
                                 );
                             })
-                        ) : diary.imageUrl ? (
-                            <div className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-                                <img src={diary.imageUrl} alt="main-img" className="w-full h-auto object-contain" />
-                            </div>
-                        ) : null}
+                        )}
                     </div>
                 )}
 
-                {/* [오른쪽] 글 영역 */}
+                {/* 오른쪽: 제목/태그/내용 */}
                 <div className={`flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-4 items-center text-center relative ${hasImages ? "" : "max-w-3xl mx-auto w-full"}`}>
 
-                    {/* (작성 시간 표시 제거됨) */}
-
                     <h1 className="text-2xl font-bold text-slate-900 leading-tight break-keep pt-2">
-                        {diary.title}
+                        {diary.title || "제목 없음"}
                     </h1>
 
                     {diary.tags && diary.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 justify-center">
                             {diary.tags.map((tag: any, idx: number) => {
-                                const tagName = typeof tag === 'string' ? tag : tag.name;
+                                const name = typeof tag === 'string' ? tag : tag.name;
                                 return (
                                     <span key={idx} className="bg-primary-50 text-primary-700 px-3 py-1 rounded-lg text-sm font-bold">
-                                        #{tagName}
+                                        #{name}
                                     </span>
                                 );
                             })}

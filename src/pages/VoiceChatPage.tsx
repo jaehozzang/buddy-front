@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useChatStore } from "../store/useChatStore"; // ✨ 추가
 import { chatApi } from "../api/chatApi";
 import { IS_TEST_MODE } from "../config";
-import { useNavigate } from "react-router-dom"; // 라우터 훅 추가
+import { useNavigate } from "react-router-dom";
 
 declare global {
     interface Window {
@@ -13,16 +14,18 @@ declare global {
 
 const VoiceChatPage = () => {
     const { user } = useAuthStore();
-    const navigate = useNavigate(); // 네비게이션 사용
+    const navigate = useNavigate();
 
-    // --- 기존 상태 및 로직 유지 ---
-    const [sessionId, setSessionId] = useState < number > (0);
+    // ✨ [변경] 전역 스토어 사용
+    const { sessionId, setSessionId } = useChatStore();
+
+    // --- 기존 상태 유지 ---
     const [isListening, setIsListening] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [myTranscript, setMyTranscript] = useState("마이크 버튼을 눌러 대화를 시작해보세요.");
     const [aiMessage, setAiMessage] = useState(`안녕, ${user?.nickname || "친구"}! 오늘 하루는 어땠어?`);
 
-    const recognitionRef = useRef < any > (null);
+    const recognitionRef = useRef<any>(null);
     const transcriptRef = useRef("");
 
     const getCharacterType = (seq?: number) => {
@@ -69,6 +72,7 @@ const VoiceChatPage = () => {
                     content: text
                 });
                 aiReply = response.result.content;
+                // ✨ 세션 ID 업데이트
                 if (response.result.sessionId && response.result.sessionId !== sessionId) {
                     setSessionId(response.result.sessionId);
                 }
@@ -121,13 +125,21 @@ const VoiceChatPage = () => {
     return (
         <div className="h-full flex flex-col items-center bg-white relative overflow-hidden">
 
-            {/* 🔙 뒤로가기 버튼 추가 (중요) */}
+            {/* 뒤로가기 버튼 */}
             <button
                 onClick={() => navigate('/app/home')}
                 className="absolute top-4 left-4 z-20 flex items-center gap-1 text-slate-500 hover:text-primary-600 transition-colors bg-white/80 px-3 py-1 rounded-full shadow-sm"
             >
                 <span>←</span>
                 <span className="text-sm font-medium">홈으로</span>
+            </button>
+
+            {/* ✨ [추가] 키보드 대화 버튼 (우측 상단) */}
+            <button
+                onClick={() => navigate('/app/chat')}
+                className="absolute top-4 right-4 z-20 flex items-center gap-1 text-primary-600 hover:text-primary-700 transition-colors bg-white/80 px-3 py-1.5 rounded-full shadow-sm border border-primary-100"
+            >
+                <span className="text-sm font-bold">키보드 대화 ⌨️</span>
             </button>
 
             {/* 상단 텍스트 */}

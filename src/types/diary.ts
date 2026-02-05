@@ -5,43 +5,46 @@ export interface DiarySummary {
     diarySeq: number;
     title: string;
     summary: string;
-    createAt: string; // ✨ 명세서 기준
+    createAt: string; // 리스트에서는 createAt 사용
 
-    // ✨ [핵심 해결] Vercel 에러 해결을 위해 명시적으로 추가
-    // 목록 조회 시 내용이 없을 수도 있으므로 ?(optional) 처리 추천
-    content?: string;
+    content?: string; // Vercel 에러 방지용 Optional
 
-    // ✨ [HomePage 오류 방지] HomePage에서 date, diaryDate 등을 체크하므로 추가
+    // 날짜 관련 필드 (유연하게)
     date?: string;
     diaryDate?: string;
     createdAt?: string;
 
-    // 태그 (문자열 또는 객체 허용)
     tags?: string[] | { tagSeq: number; name: string }[];
-
-    // 이미지 (유연하게 허용)
     images?: { url: string }[] | string[];
     thumbnail?: string;
-    imageUrl?: string; // 가끔 imageUrl로 들어오는 경우 대비
+    imageUrl?: string;
 }
 
-// 2. 일기 상세 조회용 (DiaryViewPage 뷰어)
+// ✨ 2. 일기 상세 조회용 (DiaryViewPage 뷰어) - JSON 명세 반영
 export interface DiaryDetail {
     diarySeq: number;
     title: string;
     content: string;
 
-    createAt?: string; // 오타 방지용 허용
-    createdAt: string; // ✨ 명세서 기준
-    diaryDate?: string; // 사용자가 지정한 날짜
+    // ✨ 날짜 필드 (JSON 기준)
+    diaryDate: string;  // "2026-02-05" (필수)
+    createdAt: string;  // "2026-02-05T03:17:34..." (필수)
 
+    // 태그 (JSON: [{ tagSeq: 79, name: "분노" }, ...])
     tags: {
-        tagSeq?: number;
+        tagSeq: number;
         name: string;
     }[];
 
-    images?: { url: string }[] | string[];
+    // 이미지 (JSON: imageUrl 문자열 1개)
     imageUrl?: string;
+
+    // 세션 정보
+    sessionSeq?: number;
+
+    // 레거시 호환용 (혹시 몰라 남겨둠)
+    createAt?: string;
+    images?: { url: string }[];
 }
 
 // 3. 일기 생성/수정 요청
