@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom"; // navigate 제거
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, getYear, getMonth } from "date-fns";
-import { diaryApi, type DailyDiaryCount } from "../api/diaryApi"; 
+import { diaryApi, type DailyDiaryCount } from "../api/diaryApi";
 import type { DiarySummary } from "../types/diary";
 import { IS_TEST_MODE } from "../config";
 
-export default function CalendarPage() {
-  const navigate = useNavigate();
+// 팝업 컴포넌트
+import DiaryViewPage from "./DiaryViewPage";
+import DiaryPage from "./DiaryPage";
 
-  // 1. 상태 관리
+export default function CalendarPage() {
+  // const navigate = useNavigate(); // ❌ 삭제 (경고 해결: 안 쓰니까 지움)
+  const location = useLocation();
+
+  // 1. 달력 관련 State
   const [selectedDate, setSelectedDate] = useState(() => {
     const savedDate = sessionStorage.getItem("calendarDate");
     return savedDate ? new Date(savedDate) : new Date();
@@ -22,6 +27,29 @@ export default function CalendarPage() {
   const [dailyDiaries, setDailyDiaries] = useState<DiarySummary[]>([]);
   const [monthlyCounts, setMonthlyCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+
+  // 2. 모달 관련 State
+  const [viewingDiaryId, setViewingDiaryId] = useState<number | null>(null);
+  const [writeMode, setWriteMode] = useState<{
+    isOpen: boolean;
+    mode: "create" | "edit";
+    diaryId?: number;
+    date?: string;
+    sessionId?: number;
+  }>({ isOpen: false, mode: "create" });
+
+  // 3. 채팅 -> 일기작성으로 넘어왔을 때 처리
+  useEffect(() => {
+    if (location.state?.sessionId) {
+      setWriteMode({
+        isOpen: true,
+        mode: "create",
+        date: location.state.date || new Date().toISOString().split("T")[0],
+        sessionId: location.state.sessionId
+      });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // 날짜 저장
   useEffect(() => {
@@ -37,77 +65,107 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-  // 월간 데이터 조회
-  useEffect(() => {
-    const fetchMonthlyData = async () => {
-      try {
-        if (IS_TEST_MODE) {
-           const dummyCounts: Record<string, number> = {};
-           let day = startDate;
-           while (day <= endDate) {
-             if (Math.random() > 0.5) {
-               dummyCounts[format(day, "yyyy-MM-dd")] = Math.floor(Math.random() * 3) + 1; 
-             }
-             day = addDays(day, 1);
-           }
-           setMonthlyCounts(dummyCounts);
-        } else {
-          const year = getYear(currentMonth);
-          const month = getMonth(currentMonth) + 1;
-          const response = await diaryApi.getMonthlyDiaryCounts(year, month);
-          
-          const countMap: Record<string, number> = {};
-          if (response.result && Array.isArray(response.result)) {
-            response.result.forEach((item: DailyDiaryCount) => {
-              countMap[item.date] = item.count;
-            });
+  // --- 데이터 로드 ---
+
+  const fetchMonthlyData = async () => {
+    try {
+      if (IS_TEST_MODE) {
+        const dummyCounts: Record<string, number> = {};
+        let day = startDate;
+        while (day <= endDate) {
+          if (Math.random() > 0.5) {
+            dummyCounts[format(day, "yyyy-MM-dd")] = Math.floor(Math.random() * 3) + 1;
           }
-          setMonthlyCounts(countMap);
+          day = addDays(day, 1);
         }
-      } catch (error) {
-        console.error("데이터 로드 실패", error);
+        setMonthlyCounts(dummyCounts);
+      } else {
+        const year = getYear(currentMonth);
+        const month = getMonth(currentMonth) + 1;
+        const response = await diaryApi.getMonthlyDiaryCounts(year, month);
+
+        const countMap: Record<string, number> = {};
+        if (response.result && Array.isArray(response.result)) {
+          response.result.forEach((item: DailyDiaryCount) => {
+            countMap[item.date] = item.count;
+          });
+        }
+        setMonthlyCounts(countMap);
       }
-    };
+    } catch (error) {
+      console.error("데이터 로드 실패", error);
+    }
+  };
+
+  const fetchDailyDiaries = async () => {
+    setLoading(true);
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+    try {
+      if (IS_TEST_MODE) {
+        setDailyDiaries(Array(3).fill(null).map((_, i) => ({
+          diarySeq: i + 1,
+          title: `테스트 일기 ${i + 1}`,
+          summary: "테스트 내용입니다.",
+          createAt: dateStr + `T10:00:00`,
+          tags: ["테스트"],
+          images: []
+        } as any)));
+      } else {
+        const response = await diaryApi.getDiariesByDate(dateStr);
+        if (response.result && Array.isArray(response.result)) {
+          setDailyDiaries(response.result);
+        } else {
+          setDailyDiaries([]);
+        }
+      }
+    } catch (error) {
+      setDailyDiaries([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchMonthlyData(); }, [currentMonth]);
+  useEffect(() => { fetchDailyDiaries(); }, [selectedDate]);
+
+  const refreshData = () => {
     fetchMonthlyData();
-  }, [currentMonth]);
+    fetchDailyDiaries();
+  };
 
-  // 일간 데이터 조회
-  useEffect(() => {
-    const fetchDiaries = async () => {
-      setLoading(true);
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
+  // --- 핸들러 ---
 
-      try {
-        if (IS_TEST_MODE) {
-          setDailyDiaries(Array(3).fill(null).map((_, i) => ({
-            diarySeq: i + 1,
-            title: `테스트 일기 ${i + 1}`,
-            summary: "우측 하단에 작은 점이 생깁니다.",
-            createAt: dateStr + `T10:00:00`,
-            tags: ["심플닷"],
-            images: []
-          } as any)));
-        } else {
-          const response = await diaryApi.getDiariesByDate(dateStr);
-          if (response.result && Array.isArray(response.result)) {
-            setDailyDiaries(response.result);
-          } else {
-            setDailyDiaries([]);
-          }
-        }
-      } catch (error) {
-        setDailyDiaries([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDiaries();
-  }, [selectedDate]);
+  const handleDiaryClick = (diarySeq: number) => {
+    setViewingDiaryId(diarySeq);
+  };
 
-  const handleDiaryClick = (diarySeq: number) => navigate(`/app/diary/${diarySeq}`);
-  const handleWriteNew = () => navigate("/app/diary/new", { state: { date: format(selectedDate, "yyyy-MM-dd") } });
+  const handleWriteNew = () => {
+    setWriteMode({
+      isOpen: true,
+      mode: "create",
+      date: format(selectedDate, "yyyy-MM-dd")
+    });
+  };
 
-  // 달력 렌더링
+  const handleSwitchToEdit = (diary: any) => {
+    setViewingDiaryId(null);
+    setWriteMode({
+      isOpen: true,
+      mode: "edit",
+      diaryId: diary.diarySeq || diary.id,
+      date: diary.diaryDate
+    });
+  };
+
+  const closeModalsAndRefresh = () => {
+    setViewingDiaryId(null);
+    setWriteMode({ ...writeMode, isOpen: false });
+    refreshData();
+  };
+
+  // --- 렌더링 ---
+
   const renderCells = () => {
     const rows = [];
     let days = [];
@@ -120,16 +178,16 @@ export default function CalendarPage() {
         const isSelected = isSameDay(day, selectedDate);
         const isNotCurrentMonth = !isSameMonth(day, monthStart);
         const isToday = isSameDay(day, new Date());
-        
+
         // 일기 개수
         const count = monthlyCounts[dateKey] || 0;
 
-        // ✨ [핵심] 개수에 따른 점 색상 결정
+        // ✨ [복구됨] 점(Dot) 색상 결정 로직
         let dotColorClass = "";
         if (!isNotCurrentMonth && count > 0) {
-            if (count === 1) dotColorClass = "bg-primary-300";      // 1개: 연한 파랑
-            else if (count === 2) dotColorClass = "bg-primary-500"; // 2개: 중간 파랑
-            else dotColorClass = "bg-primary-700";                  // 3개+: 진한 파랑
+          if (count === 1) dotColorClass = "bg-primary-300";      // 1개: 연한 색
+          else if (count === 2) dotColorClass = "bg-primary-500"; // 2개: 중간 색
+          else dotColorClass = "bg-primary-700";                  // 3개+: 진한 색
         }
 
         days.push(
@@ -139,7 +197,7 @@ export default function CalendarPage() {
               relative h-20 md:h-auto md:flex-1 border-r border-b border-slate-100 
               flex flex-col items-start justify-start p-2 cursor-pointer transition-colors
               ${isNotCurrentMonth ? "text-slate-300 bg-slate-50/50" : "text-slate-700 bg-white hover:bg-slate-50"}
-              ${isSelected ? "ring-2 ring-inset ring-primary-400 z-10" : ""} {/* 선택 테두리 유지 */}
+              ${isSelected ? "ring-2 ring-inset ring-primary-400 z-10" : ""}
             `}
             onClick={() => {
               setSelectedDate(cloneDay);
@@ -147,21 +205,20 @@ export default function CalendarPage() {
                 setCurrentMonth(cloneDay);
               }
             }}
-            title={count > 0 ? `${count}개의 기록` : undefined}
           >
-            {/* 날짜 숫자 (오늘이면 동그라미) */}
-            <span 
+            {/* 날짜 숫자 */}
+            <span
               className={`text-sm font-medium z-10
-                ${isToday 
-                  ? "bg-primary-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm" 
+                ${isToday
+                  ? "bg-primary-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm"
                   : ""
                 }
               `}
             >
               {formattedDate}
             </span>
-            
-            {/* ✨ [추가] 오른쪽 아래 작은 동그라미 점 */}
+
+            {/* ✨ [복구됨] 오른쪽 아래 작은 점 (Dot) */}
             {dotColorClass && (
               <div className={`absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full ${dotColorClass}`} />
             )}
@@ -194,7 +251,8 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-160px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+    <div className="h-[calc(100vh-160px)] flex flex-col md:flex-row bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm relative">
+
       {/* [왼쪽] 달력 */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 flex-shrink-0">
@@ -311,6 +369,28 @@ export default function CalendarPage() {
           )}
         </div>
       </div>
+
+      {/* 팝업들 */}
+      {viewingDiaryId && (
+        <DiaryViewPage
+          diaryId={viewingDiaryId}
+          onClose={() => setViewingDiaryId(null)}
+          onEdit={handleSwitchToEdit}
+          onDeleteSuccess={closeModalsAndRefresh}
+        />
+      )}
+
+      {writeMode.isOpen && (
+        <DiaryPage
+          mode={writeMode.mode}
+          initialDate={writeMode.date}
+          diaryId={writeMode.diaryId}
+          sessionId={writeMode.sessionId}
+          onClose={() => setWriteMode({ ...writeMode, isOpen: false })}
+          onSaveSuccess={closeModalsAndRefresh}
+        />
+      )}
+
     </div>
   );
 }

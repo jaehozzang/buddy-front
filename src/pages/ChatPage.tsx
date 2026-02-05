@@ -179,16 +179,18 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
             return;
         }
 
-        // 1. 일기 작성 페이지로 이동 (데이터는 state로 넘겨줌)
-        navigate("/app/diary/new", {
+        // ✨ [수정 포인트] 
+        // 기존: navigate("/app/diary/new", ... 
+        // 변경: navigate("/app/calendar", ... 
+        // 이유: 이제 일기 작성창은 캘린더 페이지 안에 팝업으로 뜨니까요!
+        navigate("/app/calendar", {
             state: {
-                sessionId: sessionId, // 현재 세션 ID를 넘겨줌
+                sessionId: sessionId, // 세션 ID를 캘린더로 전달
                 date: new Date().toISOString().split("T")[0]
             }
         });
 
-        // ✨ [핵심 추가] 이동 후에는 '전역 스토어'의 세션 ID를 초기화!
-        // 그래야 다음에 다시 채팅 들어왔을 때 새 방(0번)으로 시작함
+        // 전역 스토어 초기화 (이건 그대로 유지)
         setSessionId(0);
     };
 
