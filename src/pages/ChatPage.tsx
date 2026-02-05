@@ -67,7 +67,6 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
     // ✨ [추가] 이전 대화 내역 불러오기
     useEffect(() => {
         const loadHistory = async () => {
-            // 세션이 없으면 기본 인사말 추가
             if (sessionId === 0) {
                 setMessages([{
                     id: 1,
@@ -79,17 +78,19 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
             }
 
             try {
-                // 이전 대화 로드
                 const res = await chatApi.getChatHistory(sessionId);
                 if (res && Array.isArray(res.result)) {
-                    // 서버 데이터를 UI 포맷으로 변환
                     const formattedMessages: Message[] = res.result.map((item: any) => ({
                         id: item.messageSeq || Math.random(),
                         text: item.content,
-                        // role은 대소문자 무관하게 처리
                         sender: (item.role || "").toUpperCase() === "USER" ? "user" : "character",
                         timestamp: new Date(item.createdAt)
                     }));
+
+                    // ⚡ [핵심 수정] 시간 순서대로 정렬 (옛날 -> 최신)
+                    // 이게 없으면 최신 메시지가 먼저 나와서 대화가 꼬여 보입니다.
+                    formattedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
                     setMessages(formattedMessages);
                 }
             } catch (error) {
