@@ -45,7 +45,7 @@ export default function Header() {
                 <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
                         {/* ✨ [추가됨] 로고 이미지 (로그인 전) */}
-                        <img src="/favicon1.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
+                        <img src="/circleicon.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
 
                         <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                             My <span className="text-primary-600">Buddy</span>
@@ -83,7 +83,7 @@ export default function Header() {
 
                 <Link to="/app/home" className="flex items-center gap-2 group">
                     {/* ✨ [추가됨] 로고 이미지 (로그인 후) */}
-                    <img src="/favicon1.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
+                    <img src="/circleicon.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
 
                     <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                         My <span className="text-primary-600">Buddy</span>
