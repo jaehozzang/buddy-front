@@ -44,6 +44,9 @@ export default function Header() {
             <header className="h-[72px] bg-white border-b border-slate-200 sticky top-0 z-50 bg-white/80 backdrop-blur-md">
                 <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
+                        {/* ✨ [추가됨] 로고 이미지 (로그인 전) */}
+                        <img src="/favicon1.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
+
                         <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                             My <span className="text-primary-600">Buddy</span>
                         </h1>
@@ -79,6 +82,9 @@ export default function Header() {
             <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
 
                 <Link to="/app/home" className="flex items-center gap-2 group">
+                    {/* ✨ [추가됨] 로고 이미지 (로그인 후) */}
+                    <img src="/favicon1.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
+
                     <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                         My <span className="text-primary-600">Buddy</span>
                     </h1>
@@ -97,8 +103,6 @@ export default function Header() {
                 </nav>
 
                 <div className="flex items-center gap-4">
-                    {/* ✨ [수정 완료] 미니 모드 버튼 & 알림 종 버튼 삭제됨 */}
-
                     <HeaderButton to="/app/chat" variant="solid">
                         대화하기
                     </HeaderButton>
