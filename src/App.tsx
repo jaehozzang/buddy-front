@@ -77,7 +77,7 @@ function App() {
           />
 
           {/* ✨ 소셜 로그인 콜백 처리 경로 */}
-          <Route path="/oauth/callback" element={<OAuthCallback />} />
+          <Route path="/auth/callback" element={<OAuthCallback />} />
 
           {/* 로그인 후 영역 (Buddy 서비스 메인 영역) */}
           <Route
