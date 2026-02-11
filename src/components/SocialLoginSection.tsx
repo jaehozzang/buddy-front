@@ -1,7 +1,7 @@
 const SocialLoginSection = () => {
     const handleSocialLogin = (provider: string) => {
         // ✨ 배포된 서버 주소를 상수로 관리하면 편합니다.
-        const SERVER_URL = "https://buddy-api.kro.kr";
+        const SERVER_URL = "http://buddy-api.kro.kr";
 
         // 해당 소셜 로그인 시작 주소로 페이지 전체 이동
         window.location.href = `${SERVER_URL}/oauth2/authorization/${provider}`;
