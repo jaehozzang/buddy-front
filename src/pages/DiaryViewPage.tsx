@@ -4,7 +4,7 @@ import { ko } from "date-fns/locale";
 import { diaryApi } from "../api/diaryApi";
 import { chatApi } from "../api/chatApi";
 import type { DiaryDetail } from "../types/diary";
-import type { ChatMessage } from "../types/chat"; // ChatMessage 타입 가져오기
+import type { ChatMessage } from "../types/chat";
 
 // ✨ 팝업 & 페이드 애니메이션
 const modalAnimation = `
@@ -31,7 +31,6 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
     const [diary, setDiary] = useState<DiaryDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // ✨ 대화 내역 관련 상태
     const [showChat, setShowChat] = useState(false);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
@@ -65,24 +64,26 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
         try {
             await diaryApi.deleteDiary(diaryId);
             alert("삭제되었습니다.");
-            onDeleteSuccess(); // 부모에게 삭제 완료 알림
+            onDeleteSuccess();
         } catch (error) {
             console.error("삭제 실패", error);
             alert("삭제 중 오류가 발생했습니다.");
         }
     };
 
-    // ✨ 3. 대화 내역 토글 & API 호출 핸들러
+    // ✨ 3. 대화 내역 토글 & API 호출 핸들러 (정렬 기능 추가!)
     const handleToggleChat = async () => {
-        // 일기 창 -> 대화 창으로 넘어갈 때 & 아직 데이터를 안 불러왔을 때만 API 호출
         if (!showChat && chatHistory.length === 0) {
-            // 타입 파일에 정의된 sessionSeq 사용!
             if (diary?.sessionSeq) {
                 setIsChatLoading(true);
                 try {
                     const response = await chatApi.getChatHistory(diary.sessionSeq);
                     if (response && response.result) {
-                        setChatHistory(response.result);
+                        // ✨ [수정 1] 오래된 대화가 위로 오도록 시간순(오름차순) 정렬!
+                        const sortedChats = [...response.result].sort((a, b) => {
+                            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                        });
+                        setChatHistory(sortedChats);
                     }
                 } catch (error) {
                     console.error("대화 내역 로드 실패", error);
@@ -93,7 +94,7 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
                 console.warn("이 일기와 연결된 sessionSeq가 없습니다.");
             }
         }
-        setShowChat(!showChat); // 화면 전환
+        setShowChat(!showChat);
     };
 
     // 🕒 시간 표시 함수
@@ -188,89 +189,91 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
                             </div>
                         )}
 
-                        {/* 2. 오른쪽: 텍스트 or 대화 내역 */}
-                        <div className={`flex-1 flex flex-col overflow-y-auto custom-scrollbar p-8 md:p-10 relative ${(!showChat && hasImages) ? "" : "mx-auto w-full max-w-3xl"}`}>
+                        {/* ✨ [수정 2] 오른쪽 영역 구조 변경: 스크롤 영역과 버튼 위치를 분리! */}
+                        <div className={`flex-1 flex flex-col relative ${(!showChat && hasImages) ? "" : "mx-auto w-full max-w-3xl"}`}>
 
-                            {/* ✨ 일기 보기 모드 */}
-                            {!showChat && (
-                                <div className="animate-fade-in flex-1 flex flex-col">
-                                    <h1 className="text-xl font-bold text-slate-800 leading-tight text-center break-keep mb-4">
-                                        {diary.title || "제목 없음"}
-                                    </h1>
+                            {/* 👉 실제 스크롤 되는 부분 */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-10 pb-24">
+                                {/* ✨ 일기 보기 모드 */}
+                                {!showChat && (
+                                    <div className="animate-fade-in flex-1 flex flex-col">
+                                        <h1 className="text-xl font-bold text-slate-800 leading-tight text-center break-keep mb-4">
+                                            {diary.title || "제목 없음"}
+                                        </h1>
 
-                                    {diary.tags && diary.tags.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 justify-center mb-6">
-                                            {diary.tags.map((tag: any, idx: number) => {
-                                                const name = typeof tag === 'string' ? tag : tag.name;
-                                                return (
-                                                    <span key={idx} className="bg-primary-50 text-primary-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-primary-100">
-                                                        #{name}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    <div className="flex-1 w-full">
-                                        <div className="prose prose-slate max-w-none">
-                                            <p className="whitespace-pre-wrap text-slate-600 leading-relaxed text-base text-center font-medium">
-                                                {diary.content}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-12 mb-8 flex justify-center opacity-20">
-                                        <div className="w-16 h-1 bg-slate-200 rounded-full"></div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ✨ 대화 내역 보기 모드 (API 데이터 연동) */}
-                            {showChat && (
-                                <div className="animate-fade-in flex-1 flex flex-col pb-16">
-                                    <div className="flex items-center justify-center gap-2 mb-8 border-b border-slate-100 pb-4">
-                                        <span className="text-2xl">💬</span>
-                                        <h2 className="text-lg font-bold text-slate-800">이날의 대화</h2>
-                                    </div>
-
-                                    <div className="flex-1 flex flex-col gap-4">
-                                        {isChatLoading ? (
-                                            <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                                                <div className="w-8 h-8 border-4 border-slate-200 border-t-primary-500 rounded-full animate-spin mb-3"></div>
-                                                <p className="text-sm font-bold text-slate-500">대화 기록을 불러오는 중...</p>
+                                        {diary.tags && diary.tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 justify-center mb-6">
+                                                {diary.tags.map((tag: any, idx: number) => {
+                                                    const name = typeof tag === 'string' ? tag : tag.name;
+                                                    return (
+                                                        <span key={idx} className="bg-primary-50 text-primary-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-primary-100">
+                                                            #{name}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
-                                        ) : chatHistory.length === 0 ? (
-                                            <div className="text-center py-10 text-slate-400 font-medium">
-                                                {diary?.sessionSeq ? "대화 내역이 없습니다." : "채팅으로 작성된 일기가 아닙니다. 📝"}
-                                            </div>
-                                        ) : (
-                                            chatHistory.map((chat) => {
-                                                // Role 판별 (User, user 모두 처리)
-                                                const isUser = chat.role.toLowerCase() === "user";
-
-                                                return (
-                                                    <div key={chat.messageSeq} className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
-                                                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed shadow-sm border ${isUser
-                                                                ? "bg-primary-600 text-white border-primary-500 rounded-tr-sm"
-                                                                : "bg-white text-slate-700 border-slate-200 rounded-tl-sm"
-                                                            }`}>
-                                                            {chat.content}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })
                                         )}
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* ✨ 토글 플로팅 버튼 (오른쪽 아래 고정) */}
+                                        <div className="flex-1 w-full">
+                                            <div className="prose prose-slate max-w-none">
+                                                <p className="whitespace-pre-wrap text-slate-600 leading-relaxed text-base text-center font-medium">
+                                                    {diary.content}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-12 mb-8 flex justify-center opacity-20">
+                                            <div className="w-16 h-1 bg-slate-200 rounded-full"></div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ✨ 대화 내역 보기 모드 */}
+                                {showChat && (
+                                    <div className="animate-fade-in flex-1 flex flex-col">
+                                        <div className="flex items-center justify-center gap-2 mb-8 border-b border-slate-100 pb-4">
+                                            <span className="text-2xl">💬</span>
+                                            <h2 className="text-lg font-bold text-slate-800">이날의 대화</h2>
+                                        </div>
+
+                                        <div className="flex-1 flex flex-col gap-4">
+                                            {isChatLoading ? (
+                                                <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                                                    <div className="w-8 h-8 border-4 border-slate-200 border-t-primary-500 rounded-full animate-spin mb-3"></div>
+                                                    <p className="text-sm font-bold text-slate-500">대화 기록을 불러오는 중...</p>
+                                                </div>
+                                            ) : chatHistory.length === 0 ? (
+                                                <div className="text-center py-10 text-slate-400 font-medium">
+                                                    {diary?.sessionSeq ? "대화 내역이 없습니다." : "채팅으로 작성된 일기가 아닙니다. 📝"}
+                                                </div>
+                                            ) : (
+                                                chatHistory.map((chat) => {
+                                                    const isUser = chat.role.toLowerCase() === "user";
+
+                                                    return (
+                                                        <div key={chat.messageSeq} className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
+                                                            <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed shadow-sm border ${isUser
+                                                                    ? "bg-primary-600 text-white border-primary-500 rounded-tr-sm"
+                                                                    : "bg-white text-slate-700 border-slate-200 rounded-tl-sm"
+                                                                }`}>
+                                                                {chat.content}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 👉 토글 플로팅 버튼 (이제 스크롤 영역 밖에 있으므로 우측 하단에 고정됨!) */}
                             <button
                                 onClick={handleToggleChat}
-                                className="absolute bottom-6 right-6 w-12 h-12 bg-primary-600 text-white rounded-full shadow-lg shadow-primary-200 hover:bg-primary-700 hover:scale-105 transition-all flex items-center justify-center z-20 group"
+                                className="absolute bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-lg shadow-primary-200 hover:bg-primary-700 hover:scale-105 transition-all flex items-center justify-center z-20 group"
                                 title={showChat ? "일기 보기" : "대화 내역 보기"}
                             >
-                                <span className="text-xl transform transition-transform group-hover:-rotate-12">
+                                <span className="text-2xl transform transition-transform group-hover:-rotate-12">
                                     {showChat ? "📝" : "💬"}
                                 </span>
                             </button>
