@@ -20,7 +20,7 @@ export default function SettingsPage() {
     if (user?.characterSeq) {
       setSelectedCharSeq(user.characterSeq);
     }
-  }, [user]);
+  }, [user?.characterSeq]); // 👈 숫자 값만 감시하도록 변경!
 
   // 캐릭터 데이터
   const characters = [

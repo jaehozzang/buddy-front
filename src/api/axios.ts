@@ -1,6 +1,6 @@
 import axios from 'axios';
-// 🚨 [중요] 여기서 useAuthStore를 import 하면 순환 참조 에러로 흰 화면이 뜹니다!
-// import { useAuthStore } from '../store/useAuthStore'; (제거함)
+// 🚨 [삭제] useAuthStore import 제거! (이게 흰 화면의 주범입니다)
+// import { useAuthStore } from '../store/useAuthStore'; 
 
 // 배포 환경(HTTPS)을 고려한 기본 주소
 const BASE_URL = 'https://buddy-api.kro.kr';
@@ -18,11 +18,11 @@ export const publicApi = axios.create(commonConfig);
 export const authApi = axios.create(commonConfig);
 
 // ----------------------------------------------------------------
-// [요청 인터셉터] - localStorage에서 직접 토큰 꺼내기
+// [요청 인터셉터] - localStorage에서 직접 꺼내기 (안전함 ✅)
 // ----------------------------------------------------------------
 authApi.interceptors.request.use(
   (config) => {
-    // 스토어 대신 localStorage에서 직접 꺼냅니다 (가장 안전함)
+    // 스토어 대신 localStorage를 믿으세요!
     const token = localStorage.getItem('accessToken');
 
     if (token) {
@@ -39,7 +39,7 @@ authApi.interceptors.request.use(
 );
 
 // ----------------------------------------------------------------
-// [응답 인터셉터] - 토큰 갱신 로직
+// [응답 인터셉터] - 토큰 만료 처리
 // ----------------------------------------------------------------
 authApi.interceptors.response.use(
   (response) => response,
@@ -47,7 +47,7 @@ authApi.interceptors.response.use(
     const originalRequest = error.config;
     const errorCode = error.response?.data?.code;
 
-    // T002 혹은 G003 에러 발생 시 (토큰 만료)
+    // T002 혹은 G003 에러 (토큰 만료)
     if ((errorCode === 'T002' || errorCode === 'G003') && !originalRequest._retry) {
       console.log(`♻️ [Auto-Refresh] 토큰 만료 감지 (${errorCode})...`);
       originalRequest._retry = true;
@@ -66,30 +66,25 @@ authApi.interceptors.response.use(
         localStorage.setItem('accessToken', newAccessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
 
-        // ✨ [참고] 여기서 useAuthStore를 호출하지 않아도, 
-        // 다음 요청부터는 localStorage의 새 토큰을 쓰기 때문에 문제 없습니다.
-        // (UI 업데이트가 꼭 필요하면 window.location.reload()를 쓸 수도 있습니다)
-
         console.log("✨ 토큰 갱신 성공! 재요청합니다.");
 
-        // 3. 실패했던 요청의 헤더를 새 토큰으로 교체 후 재시도
+        // 3. 실패했던 요청 재시도
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
         return authApi(originalRequest);
 
       } catch (refreshError) {
-        console.error("❌ 리프레시 토큰 만료/실패. 강제 로그아웃.", refreshError);
+        console.error("❌ 리프레시 토큰 만료. 로그아웃.", refreshError);
 
         // 데이터 청소
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
 
-        // 강제 이동 (스토어 logout 함수 대신 브라우저 이동 사용)
+        // 🚨 스토어 함수 대신 강제 이동 (순환 참조 방지)
         window.location.href = '/auth/login';
 
         return Promise.reject(refreshError);
       }
     }
-
     return Promise.reject(error);
   }
 );
