@@ -84,11 +84,12 @@ function App() {
             path="/app"
             element={
               isLoggedIn ? (
-                // ✨ 1, 2, 3 중 하나가 아니면 메인 레이아웃 안 보여줌!
+                // ✨ 캐릭터(1,2,3)가 있으면 통과, 없으면 캐릭터 선택 페이지로!
                 [1, 2, 3].includes(useAuthStore.getState().user?.characterSeq || 0) ? (
                   <MainLayout />
                 ) : (
-                  <Navigate to="/auth/register/nickname" replace />
+                  // 원래 "/auth/register/nickname" 이었던 것을 아래 주소로 변경 👇
+                  <Navigate to="/auth/register/character" replace />
                 )
               ) : (
                 <Navigate to="/auth/login" replace />
