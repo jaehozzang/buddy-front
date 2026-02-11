@@ -31,9 +31,13 @@ export default function OAuthCallback() {
                 const seq = memberData.characterSeq;
                 const hasValidCharacter = seq === 1 || seq === 2 || seq === 3;
 
-                if (!memberData.nickname || !hasValidCharacter) {
-                    navigate("/auth/register/nickname", { replace: true });
+                // ✨ [수정] 닉네임 유무와 상관없이, '캐릭터'가 없으면 캐릭터 선택 페이지로 직행!
+                if (!hasValidCharacter) {
+                    console.log("🚨 캐릭터가 아직 없네요! 캐릭터 선택 페이지로 이동합니다.");
+                    // 원래 "/auth/register/nickname" 이었던 것을 아래 주소로 변경 👇
+                    navigate("/auth/register/character", { replace: true });
                 } else {
+                    console.log("✅ 완벽한 유저군요! 홈으로 이동합니다.");
                     navigate("/app/home", { replace: true });
                 }
             } catch (error) {
