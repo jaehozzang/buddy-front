@@ -84,7 +84,12 @@ function App() {
             path="/app"
             element={
               isLoggedIn ? (
-                <MainLayout />
+                // ✨ 1, 2, 3 중 하나가 아니면 메인 레이아웃 안 보여줌!
+                [1, 2, 3].includes(useAuthStore.getState().user?.characterSeq || 0) ? (
+                  <MainLayout />
+                ) : (
+                  <Navigate to="/auth/register/nickname" replace />
+                )
               ) : (
                 <Navigate to="/auth/login" replace />
               )
