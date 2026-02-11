@@ -38,8 +38,9 @@ export default function CalendarPage() {
     sessionId?: number;
   }>({ isOpen: false, mode: "create" });
 
-  // 3. 채팅 -> 일기작성으로 넘어왔을 때 처리
+  // 3. 외부에서 넘어왔을 때 처리 (채팅종료 후 작성 OR 홈페이지에서 일기 클릭)
   useEffect(() => {
+    // (1) 채팅 종료 후 넘어온 경우 -> 작성 팝업 열기
     if (location.state?.sessionId) {
       setWriteMode({
         isOpen: true,
@@ -47,6 +48,22 @@ export default function CalendarPage() {
         date: location.state.date || new Date().toISOString().split("T")[0],
         sessionId: location.state.sessionId
       });
+      window.history.replaceState({}, document.title);
+    }
+
+    // ✨ (2) [신규 추가] 홈 화면에서 일기를 클릭해서 넘어온 경우 -> 뷰어 팝업 열기
+    if (location.state?.openDiaryId) {
+      // 모달 띄우기
+      setViewingDiaryId(location.state.openDiaryId);
+
+      // 쪽지에 날짜도 있다면, 달력의 선택된 날짜도 같이 이동시켜줌
+      if (location.state.targetDate) {
+        const target = new Date(location.state.targetDate);
+        setSelectedDate(target);
+        setCurrentMonth(target);
+      }
+
+      // 팝업 한 번 띄웠으면 쪽지 파쇄하기 (새로고침 방지)
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);

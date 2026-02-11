@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { userApi } from "../api/userApi";
+import { memberApi } from "../api/memberApi";
 import { IS_TEST_MODE } from "../config";
 import { useThemeStore } from "../store/useThemeStore"; // ✨ 테마 스토어 추가
 
@@ -62,7 +62,7 @@ export default function SettingsPage() {
         if (IS_TEST_MODE) {
           updateUserInfo({ nickname: inputValue });
         } else {
-          await userApi.updateNickname(inputValue);
+          await memberApi.updateNickname(inputValue);
           updateUserInfo({ nickname: inputValue });
         }
       }
@@ -70,7 +70,7 @@ export default function SettingsPage() {
         if (IS_TEST_MODE) {
           updateUserInfo({ characterNickname: inputValue });
         } else {
-          await userApi.updateBuddyName(inputValue);
+          await memberApi.updateBuddyName(inputValue);
           updateUserInfo({ characterNickname: inputValue });
         }
       }
@@ -89,7 +89,7 @@ export default function SettingsPage() {
       if (IS_TEST_MODE) {
         updateUserInfo({ characterSeq: selectedCharSeq });
       } else {
-        await userApi.updateCharacterType(selectedCharSeq);
+        await memberApi.updateCharacterType(selectedCharSeq);
         updateUserInfo({ characterSeq: selectedCharSeq });
       }
       alert("캐릭터가 변경되었습니다! 🎉");

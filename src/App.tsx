@@ -16,10 +16,11 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import RegisterNicknamePage from "./pages/RegisterNicknamePage";
 import CharacterSelectPage from "./pages/CharacterSelectPage";
+import OAuthCallback from "./pages/OAuthCallback"; // ✨ 추가된 콜백 페이지
 
 import HomePage from "./pages/HomePage";
 import ChatPage from "./pages/ChatPage";
-import VoiceChatPage from "./pages/VoiceChatPage"; // 👈 확장자 제거
+import VoiceChatPage from "./pages/VoiceChatPage";
 import CalendarPage from "./pages/CalendarPage";
 import SettingsPage from "./pages/SettingsPage";
 import MainLayout from "./MainLayout";
@@ -75,7 +76,10 @@ function App() {
             element={<CharacterSelectPage />}
           />
 
-          {/* 로그인 후 영역 */}
+          {/* ✨ 소셜 로그인 콜백 처리 경로 */}
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
+
+          {/* 로그인 후 영역 (Buddy 서비스 메인 영역) */}
           <Route
             path="/app"
             element={
@@ -97,6 +101,7 @@ function App() {
             <Route path="report" element={<ReportPage />} />
           </Route>
 
+          {/* 그 외 모든 경로는 메인으로 리다이렉트 */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -164,7 +164,18 @@ const HomePage = () => {
                   return (
                     <div
                       key={diary.diarySeq}
-                      onClick={() => navigate(`/app/diary/${diary.diarySeq}`)}
+                      onClick={() => {
+                        // 쪽지에 담을 날짜 구하기
+                        const dateStr = d.date || d.diaryDate || d.createdAt || d.createAt;
+
+                        // 달력 페이지로 이동하면서 state(쪽지) 전달!
+                        navigate('/app/calendar', {
+                          state: {
+                            openDiaryId: diary.diarySeq, // 열어볼 일기 번호
+                            targetDate: dateStr          // 달력 페이지가 이동해야 할 날짜
+                          }
+                        });
+                      }}
                       className="group bg-white rounded-2xl border border-primary-100 shadow-sm hover:shadow-md hover:border-primary-300 hover:-translate-y-0.5 transition-all cursor-pointer relative overflow-hidden flex flex-col p-3 items-start justify-start text-left"
                     >
                       <span className="text-[10px] font-bold text-primary-400 mb-1.5 z-10 bg-primary-50 px-1.5 py-0.5 rounded-md">
