@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Routes,
   Route,
@@ -6,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import { useAuthStore } from "./store/useAuthStore";
+import { useThemeStore } from "./store/useThemeStore";
 
 import Header from "./components/Header";
 
@@ -16,8 +18,8 @@ import RegisterNicknamePage from "./pages/RegisterNicknamePage";
 import CharacterSelectPage from "./pages/CharacterSelectPage";
 
 import HomePage from "./pages/HomePage";
-import ChatPage from "./pages/ChatPage"; // 기존 텍스트 채팅
-import VoiceChatPage from "./pages/VoiceChatPage.tsx"; // 👈 새로 추가된 음성 채팅 페이지
+import ChatPage from "./pages/ChatPage";
+import VoiceChatPage from "./pages/VoiceChatPage"; // 👈 확장자 제거
 import CalendarPage from "./pages/CalendarPage";
 import SettingsPage from "./pages/SettingsPage";
 import MainLayout from "./MainLayout";
@@ -28,12 +30,33 @@ function App() {
   const isAppRoute = location.pathname.startsWith("/app");
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
+  const theme = useThemeStore((state) => state.theme);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = () => {
+      root.classList.remove("dark");
+      if (theme === "dark") {
+        root.classList.add("dark");
+      } else if (theme === "system" && systemPrefersDark.matches) {
+        root.classList.add("dark");
+      }
+    };
+
+    applyTheme();
+
+    if (theme === "system") {
+      systemPrefersDark.addEventListener("change", applyTheme);
+      return () => systemPrefersDark.removeEventListener("change", applyTheme);
+    }
+  }, [theme]);
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col">
-      {/* 상단 공통 헤더 */}
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
       <Header />
 
-      {/* 아래 내용 부분 */}
       <main className={`flex-1 ${isAppRoute ? "" : "px-6 py-10"}`}>
         <Routes>
           {/* 로그인 전 페이지들 */}
@@ -66,15 +89,14 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="home" element={<HomePage />} />
 
-            {/* 👇 채팅 관련 라우트 */}
-            <Route path="chat" element={<ChatPage />} /> {/* 기존 텍스트 채팅 */}
-            <Route path="voice-chat" element={<VoiceChatPage />} /> {/* 👈 추가됨: 음성 채팅 */}
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="voice-chat" element={<VoiceChatPage />} />
 
             <Route path="calendar" element={<CalendarPage />} />
-
             <Route path="settings" element={<SettingsPage />} />
             <Route path="report" element={<ReportPage />} />
           </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

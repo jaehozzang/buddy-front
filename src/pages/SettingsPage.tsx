@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { userApi } from "../api/userApi";
 import { IS_TEST_MODE } from "../config";
+import { useThemeStore } from "../store/useThemeStore"; // ✨ 테마 스토어 추가
 
 export default function SettingsPage() {
   const { user, logout, updateUserInfo } = useAuthStore();
+  const { theme, setTheme } = useThemeStore(); // ✨ 테마 상태 가져오기
 
   // 입력 모드 상태
   const [editingField, setEditingField] = useState<"nickname" | "buddyName" | null>(null);
@@ -22,23 +24,23 @@ export default function SettingsPage() {
 
   // 캐릭터 데이터
   const characters = [
-    { 
-      seq: 1, 
-      name: "햄스터", 
-      desc: "작은 일도 놓치지 않고 꼼꼼하게 기록해주는 성실한 햄스터예요!", 
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png" 
+    {
+      seq: 1,
+      name: "햄스터",
+      desc: "작은 일도 놓치지 않고 꼼꼼하게 기록해주는 성실한 햄스터예요!",
+      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png"
     },
-    { 
-      seq: 2, 
-      name: "여우", 
-      desc: "당신의 하루를 지혜롭고 센스 있게 정리해주는 똑똑한 여우예요.", 
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png" 
+    {
+      seq: 2,
+      name: "여우",
+      desc: "당신의 하루를 지혜롭고 센스 있게 정리해주는 똑똑한 여우예요.",
+      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png"
     },
-    { 
-      seq: 3, 
-      name: "판다", 
-      desc: "느긋한 마음으로 당신의 고민을 들어주는 다정한 판다예요.", 
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png" 
+    {
+      seq: 3,
+      name: "판다",
+      desc: "느긋한 마음으로 당신의 고민을 들어주는 다정한 판다예요.",
+      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png"
     },
   ];
 
@@ -79,7 +81,6 @@ export default function SettingsPage() {
     }
   };
 
-
   // 2. 캐릭터 저장 핸들러
   const handleCharacterSave = async () => {
     if (user?.characterSeq === selectedCharSeq) return;
@@ -98,7 +99,6 @@ export default function SettingsPage() {
     }
   };
 
-
   const handleLogout = () => {
     if (confirm("로그아웃 하시겠습니까?")) {
       logout();
@@ -107,7 +107,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white px-6 py-8 md:px-12">
+    <div className="h-full overflow-y-auto bg-white px-6 py-8 md:px-12 transition-colors duration-200">
       <div className="max-w-2xl mx-auto animate-[fade-in_0.5s]">
 
         <div className="mb-10">
@@ -201,7 +201,7 @@ export default function SettingsPage() {
           <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
             <span>🎭</span> 캐릭터 변경
           </h3>
-          
+
           <div className="flex flex-col items-center">
             <div className="flex flex-wrap justify-center gap-4 mb-6">
               {characters.map((char) => (
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                   <span className={`text-xs font-bold ${selectedCharSeq === char.seq ? "text-primary-700" : "text-slate-500"}`}>
                     {char.name}
                   </span>
-                  
+
                   {user?.characterSeq === char.seq && (
                     <div className="absolute -top-2 -right-2 bg-slate-800 text-white rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm">
                       사용중
@@ -229,17 +229,17 @@ export default function SettingsPage() {
             </div>
 
             <div className="bg-slate-50 rounded-xl p-4 w-full text-center border border-slate-100 mb-4 animate-[fade-in_0.3s]">
-               <p className="text-sm text-slate-600 font-medium">
-                 "<span className="text-primary-600 font-bold">{selectedCharacterInfo.name}</span>"는 {selectedCharacterInfo.desc}
-               </p>
+              <p className="text-sm text-slate-600 font-medium">
+                "<span className="text-primary-600 font-bold">{selectedCharacterInfo.name}</span>"는 {selectedCharacterInfo.desc}
+              </p>
             </div>
 
-            <button 
+            <button
               onClick={handleCharacterSave}
               disabled={user?.characterSeq === selectedCharSeq}
               className={`w-full py-3 rounded-xl font-bold text-sm transition-all
-                ${user?.characterSeq === selectedCharSeq 
-                  ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                ${user?.characterSeq === selectedCharSeq
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                   : "bg-primary-600 text-white hover:bg-primary-700 shadow-md shadow-primary-200 hover:shadow-lg active:scale-[0.98]"
                 }`}
             >
@@ -248,7 +248,54 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 3. 계정 관리 */}
+        {/* ✨ 3. 화면 설정 (새로 추가됨!) */}
+        <div className="mb-12 pb-12 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <span>🎨</span> 화면 테마
+          </h3>
+
+          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTheme('system')}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border flex flex-col items-center gap-1 ${theme === 'system'
+                    ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
+                  }`}
+              >
+                <span className="text-lg">⚙️</span>
+                시스템
+              </button>
+
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border flex flex-col items-center gap-1 ${theme === 'light'
+                    ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
+                  }`}
+              >
+                <span className="text-lg">☀️</span>
+                라이트
+              </button>
+
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border flex flex-col items-center gap-1 ${theme === 'dark'
+                    ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
+                  }`}
+              >
+                <span className="text-lg">🌙</span>
+                다크
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mt-4 text-center">
+              시스템 테마를 선택하면 기기의 설정(라이트/다크)을 자동으로 따라갑니다.
+            </p>
+          </div>
+        </div>
+
+        {/* 4. 계정 관리 */}
         <div>
           <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
             <span>🔐</span> 계정 관리
@@ -271,7 +318,7 @@ export default function SettingsPage() {
 
             <div className="h-px bg-slate-200" />
 
-            {/* ✅ 회원 탈퇴 버튼 (디자인 수정됨: LOGOUT과 같은 형태 but RED) */}
+            {/* 회원 탈퇴 버튼 */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-red-500">회원 탈퇴</p>
