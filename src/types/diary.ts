@@ -54,4 +54,5 @@ export interface CreateDiaryRequest {
     diaryDate?: string;
     imageUrl?: string;
     tags: string[];
+    sessionSeq?: number; // ✨ [추가!] 백엔드에 채팅방 번호를 넘겨주기 위해 필수!
 }

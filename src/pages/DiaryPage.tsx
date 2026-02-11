@@ -119,15 +119,28 @@ export default function DiaryPage({
   // 저장 핸들러
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) return alert("제목과 내용을 입력해주세요!");
+
     try {
       if (IS_TEST_MODE) {
         alert("테스트 저장 완료");
         onSaveSuccess();
       } else {
         const formData = new FormData();
-        const diaryData = { title, content, tags, diaryDate: targetDate };
+
+        // ✨ [수정됨] 복잡한 문법 빼고 가장 안전하게 담는 방법!
+        const diaryData = {
+          title: title,
+          content: content,
+          tags: tags,
+          diaryDate: targetDate,
+          sessionSeq: sessionId // 👈 sessionId가 있으면 숫자가 들어가고, 없으면 알아서 무시됩니다!
+        };
+
         formData.append("request", JSON.stringify(diaryData));
-        if (selectedFile) formData.append("image", selectedFile);
+
+        if (selectedFile) {
+          formData.append("image", selectedFile);
+        }
 
         if (mode === "edit" && diaryId) {
           await diaryApi.updateDiary(diaryId, formData);
