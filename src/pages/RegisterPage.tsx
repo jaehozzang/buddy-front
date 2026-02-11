@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import SocialLoginSection from "../components/SocialLoginSection";
+import { authService } from "../api/authApi"; // ✨ API 불러오기
 
 function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -10,20 +11,88 @@ function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
+  // ✨ 이메일 인증 관련 상태
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(180); // 3분
+  const [emailMessage, setEmailMessage] = useState({ text: "", isError: false });
+
   const navigate = useNavigate();
 
-  // ✨ 유효성 상태 확인
-  // 비밀번호 입력 중인데 8~20자가 아닐 때 (안내 문구만 띄움)
+  // 유효성 상태 확인
   const isPasswordInvalid = password.length > 0 && (password.length < 8 || password.length > 20);
-  // 비밀번호 확인이 다를 때 (이건 기존처럼 빨갛게 에러 표시)
   const isPasswordMismatch = passwordConfirm.length > 0 && password !== passwordConfirm;
 
+  // ⏳ 타이머 로직
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+    if (isCodeSent && !isEmailVerified && timeLeft > 0) {
+      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (timeLeft === 0) {
+      setEmailMessage({ text: "인증 시간이 만료되었습니다.", isError: true });
+      setIsCodeSent(false);
+    }
+    return () => clearInterval(timer);
+  }, [isCodeSent, isEmailVerified, timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // 🚀 1. 인증번호 전송
+  const handleSendCode = async () => {
+    if (!email.trim() || !email.includes("@")) {
+      setEmailMessage({ text: "올바른 이메일 형식을 입력해주세요.", isError: true });
+      return;
+    }
+    try {
+      setEmailMessage({ text: "인증번호를 전송 중입니다...", isError: false });
+      await authService.sendSignupEmail({ email });
+      setIsCodeSent(true);
+      setTimeLeft(180);
+      setEmailMessage({ text: "이메일로 인증번호가 전송되었습니다.", isError: false });
+    } catch (error: any) {
+      setEmailMessage({ text: error.response?.data?.message || "전송에 실패했습니다.", isError: true });
+    }
+  };
+
+  // 🚀 2. 인증번호 확인
+  const handleVerifyCode = async () => {
+    if (!verificationCode.trim()) {
+      setEmailMessage({ text: "인증번호를 입력해주세요.", isError: true });
+      return;
+    }
+    try {
+      const response = await authService.verifySignupEmail({ email, code: verificationCode });
+      if (response.result === true) {
+        setIsEmailVerified(true);
+        setEmailMessage({ text: "이메일 인증이 완료되었습니다! ✅", isError: false });
+      } else {
+        setEmailMessage({ text: "인증번호가 일치하지 않습니다.", isError: true });
+      }
+    } catch (error: any) {
+      setEmailMessage({ text: error.response?.data?.message || "잘못된 인증번호입니다.", isError: true });
+    }
+  };
+
+  // 🚀 3. 다음 단계 이동
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) { alert("이메일과 비밀번호를 입력해주세요."); return; }
-    if (!email.includes("@")) { alert("올바른 이메일 형식이 아닙니다."); return; }
-    if (password.length < 8 || password.length > 20) { alert("비밀번호는 8자 이상 20자 이하로 설정해주세요."); return; }
-    if (password !== passwordConfirm) { alert("비밀번호가 일치하지 않습니다!"); return; }
+    if (!isEmailVerified) {
+      alert("먼저 이메일 인증을 완료해주세요.");
+      return;
+    }
+    if (password.length < 8 || password.length > 20) {
+      alert("비밀번호는 8자 이상 20자 이하로 설정해주세요.");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      alert("비밀번호가 일치하지 않습니다!");
+      return;
+    }
     navigate("/auth/register/nickname", { state: { email, password } });
   };
 
@@ -33,34 +102,91 @@ function RegisterPage() {
 
         <form className="flex flex-col gap-4" onSubmit={handleNext}>
 
-          {/* 1. EMAIL */}
-          <div className="relative">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 z-10">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="peer w-full rounded-md bg-white border border-primary-200 px-8 py-3 
-              text-sm text-slate-700 focus:outline-none focus:border-primary-400 placeholder-transparent"
-              placeholder=" "
-            />
-            <label
-              htmlFor="email"
-              className="absolute left-8 top-3 text-sm text-slate-400 transition-all cursor-text bg-white px-1
-              peer-focus:-top-2 peer-focus:left-5 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold
-              peer-placeholder-shown:top-3 peer-placeholder-shown:left-8 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
-              peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold"
-            >
-              이메일
-            </label>
+          {/* 1. EMAIL & 인증받기 버튼 */}
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 z-10">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  id="email"
+                  disabled={isEmailVerified}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="peer w-full rounded-md bg-white border border-primary-200 px-8 py-3 
+                  text-sm text-slate-700 focus:outline-none focus:border-primary-400 placeholder-transparent disabled:bg-slate-50 disabled:text-slate-400"
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="email"
+                  className="absolute left-8 top-3 text-sm text-slate-400 transition-all cursor-text bg-transparent px-1
+                  peer-focus:-top-2 peer-focus:left-5 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold peer-focus:bg-white
+                  peer-placeholder-shown:top-3 peer-placeholder-shown:left-8 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
+                  peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold peer-[:not(:placeholder-shown)]:bg-white"
+                >
+                  이메일
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={isEmailVerified || !email}
+                className="whitespace-nowrap px-3 py-3 rounded-md border border-primary-600 bg-primary-50 text-primary-600 text-xs font-bold hover:bg-primary-100 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                {isCodeSent ? "재전송" : "인증받기"}
+              </button>
+            </div>
+            {/* 이메일 관련 메시지 출력 */}
+            {emailMessage.text && (
+              <p className={`text-xs font-medium ml-1 ${emailMessage.isError ? "text-red-500" : "text-primary-600"}`}>
+                {emailMessage.text}
+              </p>
+            )}
           </div>
 
-          {/* ✨ 2. PASSWORD (입력창 색상은 정상 유지, 아래 안내문구만 회색으로 추가) */}
+          {/* ✨ 1-5. 인증번호 입력창 (발송 후에만 나타남) */}
+          {isCodeSent && !isEmailVerified && (
+            <div className="flex gap-2 animate-[fade-in-down_0.3s]">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  id="verificationCode"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  className="peer w-full rounded-md bg-white border border-primary-200 pl-4 pr-12 py-3 
+                  text-sm text-slate-700 focus:outline-none focus:border-primary-400 placeholder-transparent"
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="verificationCode"
+                  className="absolute left-4 top-3 text-sm text-slate-400 transition-all cursor-text bg-transparent px-1
+                  peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold peer-focus:bg-white
+                  peer-placeholder-shown:top-3 peer-placeholder-shown:left-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
+                  peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold peer-[:not(:placeholder-shown)]:bg-white"
+                >
+                  인증번호
+                </label>
+                {/* 타이머 표시 */}
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-red-500">
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleVerifyCode}
+                className="whitespace-nowrap px-4 py-3 rounded-md border border-primary-600 bg-primary-50 text-primary-600 text-xs font-bold hover:bg-primary-100 transition-colors"
+              >
+                확인
+              </button>
+            </div>
+          )}
+
+          {/* 2. PASSWORD */}
           <div className="flex flex-col gap-1">
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 text-slate-400">
@@ -97,15 +223,14 @@ function RegisterPage() {
 
               <label
                 htmlFor="password"
-                className="absolute left-8 top-3 text-sm text-slate-400 transition-all cursor-text bg-white px-1
-                  peer-focus:-top-2 peer-focus:left-5 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold
+                className="absolute left-8 top-3 text-sm text-slate-400 transition-all cursor-text bg-transparent px-1
+                  peer-focus:-top-2 peer-focus:left-5 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold peer-focus:bg-white
                   peer-placeholder-shown:top-3 peer-placeholder-shown:left-8 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
-                  peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold"
+                  peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold peer-[:not(:placeholder-shown)]:bg-white"
               >
                 비밀번호
               </label>
             </div>
-            {/* ✨ 안내 메시지 (자연스러운 회색 적용) */}
             {isPasswordInvalid && (
               <p className="text-xs text-slate-500 ml-2 font-medium">
                 비밀번호는 8자 이상, 20자 이하로 설정해주세요.
@@ -113,7 +238,7 @@ function RegisterPage() {
             )}
           </div>
 
-          {/* 3. PASSWORD CONFIRM (여기는 다르면 확실하게 빨간색으로 경고!) */}
+          {/* 3. PASSWORD CONFIRM */}
           <div className="flex flex-col gap-1">
             <div className="relative">
               <span className={`absolute left-2.5 top-1/2 -translate-y-1/2 z-10 ${isPasswordMismatch ? "text-red-500" : "text-slate-400"}`}>
@@ -128,10 +253,7 @@ function RegisterPage() {
                 maxLength={20}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 className={`peer w-full rounded-md bg-white px-8 py-3 text-sm text-slate-700 focus:outline-none placeholder-transparent border
-                  ${isPasswordMismatch
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-primary-200 focus:border-primary-400"
-                  }`}
+                  ${isPasswordMismatch ? "border-red-500 focus:border-red-500" : "border-primary-200 focus:border-primary-400"}`}
                 placeholder=" "
               />
 
@@ -154,19 +276,15 @@ function RegisterPage() {
 
               <label
                 htmlFor="passwordConfirm"
-                className={`absolute left-8 top-3 text-sm transition-all cursor-text bg-white px-1
-                  peer-focus:-top-2 peer-focus:left-5 peer-focus:text-xs peer-focus:font-bold
+                className={`absolute left-8 top-3 text-sm transition-all cursor-text bg-transparent px-1
+                  peer-focus:-top-2 peer-focus:left-5 peer-focus:text-xs peer-focus:font-bold peer-focus:bg-white
                   peer-placeholder-shown:top-3 peer-placeholder-shown:left-8 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
-                  peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:font-bold
-                  ${isPasswordMismatch
-                    ? "text-red-500 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-red-500"
-                    : "text-slate-400 peer-focus:text-primary-600 peer-[:not(:placeholder-shown)]:text-primary-600"
-                  }`}
+                  peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:font-bold peer-[:not(:placeholder-shown)]:bg-white
+                  ${isPasswordMismatch ? "text-red-500 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-red-500" : "text-slate-400 peer-focus:text-primary-600 peer-[:not(:placeholder-shown)]:text-primary-600"}`}
               >
                 비밀번호 확인
               </label>
             </div>
-
             {isPasswordMismatch && (
               <p className="text-xs text-red-500 ml-2 font-medium">
                 비밀번호가 일치하지 않습니다.

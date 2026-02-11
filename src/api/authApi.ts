@@ -21,4 +21,16 @@ export const authService = {
     const response = await publicApi.post<AuthResponse<LoginResult>>('/api/v1/auth/oauth-link', data);
     return response.data;
   },
+
+  // ✨ 1. 이메일 인증 코드 발송
+  sendSignupEmail: async (data: { email: string }) => {
+    const response = await publicApi.post('/api/v1/auth/signup/email', data);
+    return response.data;
+  },
+
+  // ✨ 2. 이메일 인증 코드 검증
+  verifySignupEmail: async (data: { email: string; code: string }) => {
+    const response = await publicApi.post('/api/v1/auth/signup/email/verify', data);
+    return response.data;
+  },
 };
