@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { authService } from "../api/authApi";
+import { memberApi } from "../api/memberApi";
 import { AxiosError } from "axios";
 import { IS_TEST_MODE } from "../config";
 
@@ -67,7 +67,7 @@ function CharacterSelectPage() {
         alert("[TEST] 회원가입 성공!");
         navigate("/auth/login");
       } else {
-        await authService.signup({
+        await memberApi.signup({
           email: email,
           password: password,
           nickname: userNickname,
