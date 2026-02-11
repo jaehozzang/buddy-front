@@ -16,7 +16,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import RegisterNicknamePage from "./pages/RegisterNicknamePage";
 import CharacterSelectPage from "./pages/CharacterSelectPage";
-import OAuthCallback from "./pages/OAuthCallback"; // ✨ 추가된 콜백 페이지
+import OAuthCallback from "./pages/OAuthCallback";
 
 import HomePage from "./pages/HomePage";
 import ChatPage from "./pages/ChatPage";
@@ -29,7 +29,12 @@ import ReportPage from "./pages/ReportPage";
 function App() {
   const location = useLocation();
   const isAppRoute = location.pathname.startsWith("/app");
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // ✨ [핵심 수정] getState() 대신 훅을 사용해 상태 변경을 실시간 구독(Subscribe)합니다.
+  const { isLoggedIn, user } = useAuthStore((state) => ({
+    isLoggedIn: state.isLoggedIn,
+    user: state.user,
+  }));
 
   const theme = useThemeStore((state) => state.theme);
 
@@ -54,6 +59,9 @@ function App() {
     }
   }, [theme]);
 
+  // 캐릭터 유효성 검사 (1, 2, 3 중 하나인지)
+  const hasValidCharacter = user?.characterSeq && [1, 2, 3].includes(user.characterSeq);
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
       <Header />
@@ -76,7 +84,7 @@ function App() {
             element={<CharacterSelectPage />}
           />
 
-          {/* ✨ 소셜 로그인 콜백 처리 경로 */}
+          {/* 소셜 로그인 콜백 처리 경로 */}
           <Route path="/auth/callback" element={<OAuthCallback />} />
 
           {/* 로그인 후 영역 (Buddy 서비스 메인 영역) */}
@@ -84,11 +92,11 @@ function App() {
             path="/app"
             element={
               isLoggedIn ? (
-                // ✨ 캐릭터(1,2,3)가 있으면 통과, 없으면 캐릭터 선택 페이지로!
-                [1, 2, 3].includes(useAuthStore.getState().user?.characterSeq || 0) ? (
+                // ✨ 수정됨: user 상태가 바뀌면 즉시 화면이 갱신되어 올바른 곳으로 보냅니다.
+                hasValidCharacter ? (
                   <MainLayout />
                 ) : (
-                  // 원래 "/auth/register/nickname" 이었던 것을 아래 주소로 변경 👇
+                  // 캐릭터가 없으면 캐릭터 선택 페이지로 이동 (닉네임 페이지 아님!)
                   <Navigate to="/auth/register/character" replace />
                 )
               ) : (

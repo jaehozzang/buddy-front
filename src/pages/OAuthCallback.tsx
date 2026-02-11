@@ -1,4 +1,3 @@
-// src/pages/OAuthCallback.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
@@ -14,7 +13,6 @@ export default function OAuthCallback() {
     const [statusText, setStatusText] = useState("Buddy가 친구 정보를 확인 중...");
 
     useEffect(() => {
-        // ✨ 가이드 1번: mode 파라미터 추출
         const mode = searchParams.get("mode");
 
         const handleSuccess = async (accessToken: string, refreshToken: string) => {
@@ -22,19 +20,18 @@ export default function OAuthCallback() {
             setTokens(accessToken, refreshToken);
 
             try {
-                // 가이드 5번: 따로 getMe() 호출 필요
+                // 내 정보 가져오기
                 const response = await memberApi.getMe();
                 const memberData = response.result;
                 setUser(memberData);
 
-                // 토끼 방지 로직 (캐릭터가 1, 2, 3 중 하나인가?)
+                // ✨ 캐릭터 유효성 검사 (1:햄스터, 2:여우, 3:판다)
                 const seq = memberData.characterSeq;
                 const hasValidCharacter = seq === 1 || seq === 2 || seq === 3;
 
-                // ✨ [수정] 닉네임 유무와 상관없이, '캐릭터'가 없으면 캐릭터 선택 페이지로 직행!
+                // ✨ [핵심 수정] 닉네임 여부와 상관없이, 캐릭터가 없으면 '캐릭터 선택' 페이지로 직행!
                 if (!hasValidCharacter) {
                     console.log("🚨 캐릭터가 아직 없네요! 캐릭터 선택 페이지로 이동합니다.");
-                    // 원래 "/auth/register/nickname" 이었던 것을 아래 주소로 변경 👇
                     navigate("/auth/register/character", { replace: true });
                 } else {
                     console.log("✅ 완벽한 유저군요! 홈으로 이동합니다.");
@@ -47,7 +44,7 @@ export default function OAuthCallback() {
         };
 
         const processCallback = async () => {
-            // ✨ 가이드 2번: 로그인 완료
+            // 1. 로그인 성공 (mode=success)
             if (mode === "success") {
                 const accessToken = searchParams.get("accessToken");
                 const refreshToken = searchParams.get("refreshToken");
@@ -58,14 +55,13 @@ export default function OAuthCallback() {
                     navigate("/auth/login", { replace: true });
                 }
             }
-            // ✨ 가이드 3번 & 4번: 계정 연동 필요
+            // 2. 계정 연동 필요 (mode=link)
             else if (mode === "link") {
                 const email = searchParams.get("email");
                 const provider = searchParams.get("provider");
                 const oauthId = searchParams.get("oauthId");
 
                 if (email && provider && oauthId) {
-                    // 모달 대신 기본 제공되는 깔끔한 confirm 창 사용
                     const isAgreed = window.confirm(`이미 ${email}로 가입된 계정이 있습니다.\n${provider} 계정과 연동하시겠습니까?`);
 
                     if (isAgreed) {
@@ -73,7 +69,6 @@ export default function OAuthCallback() {
                             setStatusText("계정을 연동하고 있어요! 🔄");
                             const linkResponse = await authService.linkOAuth({ email, provider, oauthId });
 
-                            // 연동 성공 시, 반환된 토큰으로 success 로직 타기
                             const { accessToken, refreshToken } = linkResponse.result;
                             if (accessToken && refreshToken) {
                                 handleSuccess(accessToken, refreshToken);
