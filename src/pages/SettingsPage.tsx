@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { memberApi } from "../api/memberApi";
 import { IS_TEST_MODE } from "../config";
-import { useThemeStore } from "../store/useThemeStore"; // ✨ 테마 스토어 추가
+import { useThemeStore } from "../store/useThemeStore";
 
 export default function SettingsPage() {
   const { user, logout, updateUserInfo } = useAuthStore();
-  const { theme, setTheme } = useThemeStore(); // ✨ 테마 상태 가져오기
+  const { theme, setTheme } = useThemeStore();
 
   // 입력 모드 상태
   const [editingField, setEditingField] = useState<"nickname" | "buddyName" | null>(null);
@@ -70,7 +70,8 @@ export default function SettingsPage() {
         if (IS_TEST_MODE) {
           updateUserInfo({ characterNickname: inputValue });
         } else {
-          await memberApi.updateBuddyName(inputValue);
+          // ✨ [수정] 함수명과 파라미터 구조 변경 (객체 형태)
+          await memberApi.updateCharacterName({ characterName: inputValue });
           updateUserInfo({ characterNickname: inputValue });
         }
       }
@@ -89,7 +90,8 @@ export default function SettingsPage() {
       if (IS_TEST_MODE) {
         updateUserInfo({ characterSeq: selectedCharSeq });
       } else {
-        await memberApi.updateCharacterType(selectedCharSeq);
+        // ✨ [수정] 함수명과 파라미터 구조 변경 (객체 형태)
+        await memberApi.updateCharacter({ characterSeq: selectedCharSeq });
         updateUserInfo({ characterSeq: selectedCharSeq });
       }
       alert("캐릭터가 변경되었습니다! 🎉");
@@ -248,7 +250,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ✨ 3. 화면 설정 (새로 추가됨!) */}
+        {/* 3. 화면 설정 */}
         <div className="mb-12 pb-12 border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
             <span>🎨</span> 화면 테마
@@ -259,8 +261,8 @@ export default function SettingsPage() {
               <button
                 onClick={() => setTheme('system')}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border flex flex-col items-center gap-1 ${theme === 'system'
-                    ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
-                    : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
+                  ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
                   }`}
               >
                 <span className="text-lg">⚙️</span>
@@ -270,8 +272,8 @@ export default function SettingsPage() {
               <button
                 onClick={() => setTheme('light')}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border flex flex-col items-center gap-1 ${theme === 'light'
-                    ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
-                    : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
+                  ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
                   }`}
               >
                 <span className="text-lg">☀️</span>
@@ -281,8 +283,8 @@ export default function SettingsPage() {
               <button
                 onClick={() => setTheme('dark')}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border flex flex-col items-center gap-1 ${theme === 'dark'
-                    ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
-                    : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
+                  ? 'bg-primary-50 border-primary-500 text-primary-700 ring-2 ring-primary-100'
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-primary-300 hover:shadow-sm'
                   }`}
               >
                 <span className="text-lg">🌙</span>
