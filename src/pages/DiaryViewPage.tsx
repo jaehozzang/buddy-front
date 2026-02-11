@@ -2,28 +2,39 @@ import { useEffect, useState } from "react";
 import { format, formatDistanceToNow, differenceInHours } from "date-fns";
 import { ko } from "date-fns/locale";
 import { diaryApi } from "../api/diaryApi";
+import { chatApi } from "../api/chatApi";
 import type { DiaryDetail } from "../types/diary";
+import type { ChatMessage } from "../types/chat"; // ChatMessage 타입 가져오기
 
-// ✨ 팝업 애니메이션
+// ✨ 팝업 & 페이드 애니메이션
 const modalAnimation = `
 @keyframes scale-up {
     0% { opacity: 0; transform: scale(0.95); }
     100% { opacity: 1; transform: scale(1); }
 }
+@keyframes fade-in {
+    0% { opacity: 0; transform: translateY(5px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
 .animate-scale-up { animation: scale-up 0.2s ease-out forwards; }
+.animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
 `;
 
-// ✨ Props 인터페이스 정의
 interface DiaryViewProps {
-    diaryId: number;          // 조회할 일기 ID
-    onClose: () => void;      // 닫기 함수
-    onEdit: (diary: DiaryDetail) => void; // 수정 버튼 클릭 시 실행할 함수
-    onDeleteSuccess: () => void; // 삭제 성공 시 부모에게 알림
+    diaryId: number;
+    onClose: () => void;
+    onEdit: (diary: DiaryDetail) => void;
+    onDeleteSuccess: () => void;
 }
 
 export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSuccess }: DiaryViewProps) {
     const [diary, setDiary] = useState<DiaryDetail | null>(null);
     const [loading, setLoading] = useState(true);
+
+    // ✨ 대화 내역 관련 상태
+    const [showChat, setShowChat] = useState(false);
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [isChatLoading, setIsChatLoading] = useState(false);
 
     // 1. 데이터 로드
     useEffect(() => {
@@ -54,11 +65,35 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
         try {
             await diaryApi.deleteDiary(diaryId);
             alert("삭제되었습니다.");
-            onDeleteSuccess(); // 부모에게 삭제 완료 알림 (새로고침용)
+            onDeleteSuccess(); // 부모에게 삭제 완료 알림
         } catch (error) {
             console.error("삭제 실패", error);
             alert("삭제 중 오류가 발생했습니다.");
         }
+    };
+
+    // ✨ 3. 대화 내역 토글 & API 호출 핸들러
+    const handleToggleChat = async () => {
+        // 일기 창 -> 대화 창으로 넘어갈 때 & 아직 데이터를 안 불러왔을 때만 API 호출
+        if (!showChat && chatHistory.length === 0) {
+            // 타입 파일에 정의된 sessionSeq 사용!
+            if (diary?.sessionSeq) {
+                setIsChatLoading(true);
+                try {
+                    const response = await chatApi.getChatHistory(diary.sessionSeq);
+                    if (response && response.result) {
+                        setChatHistory(response.result);
+                    }
+                } catch (error) {
+                    console.error("대화 내역 로드 실패", error);
+                } finally {
+                    setIsChatLoading(false);
+                }
+            } else {
+                console.warn("이 일기와 연결된 sessionSeq가 없습니다.");
+            }
+        }
+        setShowChat(!showChat); // 화면 전환
     };
 
     // 🕒 시간 표시 함수
@@ -92,7 +127,6 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
     if (diary.diaryDate) headerDateObj = new Date(diary.diaryDate);
     else if (diary.createdAt || diary.createAt) headerDateObj = new Date(diary.createdAt || diary.createAt || "");
 
-    // 이미지 존재 여부 확인
     const hasImages = !!diary.imageUrl || (diary.images?.length ?? 0) > 0;
 
     return (
@@ -129,11 +163,10 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
                         </div>
                     </div>
 
-                    {/* ✨ 본문 영역 (이미지 + 텍스트) */}
                     <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
-                        {/* 1. 왼쪽: 사진 (있을 때만 표시) - 여기를 실수로 지웠었네요! 복구했습니다. */}
-                        {hasImages && (
+                        {/* 1. 왼쪽: 사진 (대화 보기 중이 아닐 때만 표시) */}
+                        {!showChat && hasImages && (
                             <div className="w-full md:w-[45%] h-64 md:h-full bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100 p-6 overflow-y-auto custom-scrollbar">
                                 <div className="text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-wider">Photo Log</div>
                                 <div className="flex flex-col gap-4">
@@ -155,41 +188,93 @@ export default function DiaryViewPage({ diaryId, onClose, onEdit, onDeleteSucces
                             </div>
                         )}
 
-                        {/* 2. 오른쪽: 텍스트 */}
-                        <div className={`flex-1 flex flex-col overflow-y-auto custom-scrollbar p-8 md:p-10 relative ${hasImages ? "" : "mx-auto w-full max-w-3xl"}`}>
+                        {/* 2. 오른쪽: 텍스트 or 대화 내역 */}
+                        <div className={`flex-1 flex flex-col overflow-y-auto custom-scrollbar p-8 md:p-10 relative ${(!showChat && hasImages) ? "" : "mx-auto w-full max-w-3xl"}`}>
 
-                            {/* (1) 제목 (맨 위, 크기 조절됨) */}
-                            <h1 className="text-xl font-bold text-slate-800 leading-tight text-center break-keep mb-4">
-                                {diary.title || "제목 없음"}
-                            </h1>
+                            {/* ✨ 일기 보기 모드 */}
+                            {!showChat && (
+                                <div className="animate-fade-in flex-1 flex flex-col">
+                                    <h1 className="text-xl font-bold text-slate-800 leading-tight text-center break-keep mb-4">
+                                        {diary.title || "제목 없음"}
+                                    </h1>
 
-                            {/* (2) 태그 (제목 아래) */}
-                            {diary.tags && diary.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-2 justify-center mb-6">
-                                    {diary.tags.map((tag: any, idx: number) => {
-                                        const name = typeof tag === 'string' ? tag : tag.name;
-                                        return (
-                                            <span key={idx} className="bg-primary-50 text-primary-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-primary-100">
-                                                #{name}
-                                            </span>
-                                        );
-                                    })}
+                                    {diary.tags && diary.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 justify-center mb-6">
+                                            {diary.tags.map((tag: any, idx: number) => {
+                                                const name = typeof tag === 'string' ? tag : tag.name;
+                                                return (
+                                                    <span key={idx} className="bg-primary-50 text-primary-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-primary-100">
+                                                        #{name}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    <div className="flex-1 w-full">
+                                        <div className="prose prose-slate max-w-none">
+                                            <p className="whitespace-pre-wrap text-slate-600 leading-relaxed text-base text-center font-medium">
+                                                {diary.content}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-12 mb-8 flex justify-center opacity-20">
+                                        <div className="w-16 h-1 bg-slate-200 rounded-full"></div>
+                                    </div>
                                 </div>
                             )}
 
-                            {/* (3) 내용 */}
-                            <div className="flex-1 w-full">
-                                <div className="prose prose-slate max-w-none">
-                                    <p className="whitespace-pre-wrap text-slate-600 leading-relaxed text-base text-center font-medium">
-                                        {diary.content}
-                                    </p>
-                                </div>
-                            </div>
+                            {/* ✨ 대화 내역 보기 모드 (API 데이터 연동) */}
+                            {showChat && (
+                                <div className="animate-fade-in flex-1 flex flex-col pb-16">
+                                    <div className="flex items-center justify-center gap-2 mb-8 border-b border-slate-100 pb-4">
+                                        <span className="text-2xl">💬</span>
+                                        <h2 className="text-lg font-bold text-slate-800">이날의 대화</h2>
+                                    </div>
 
-                            {/* 데코레이션 */}
-                            <div className="mt-12 flex justify-center opacity-20">
-                                <div className="w-16 h-1 bg-slate-200 rounded-full"></div>
-                            </div>
+                                    <div className="flex-1 flex flex-col gap-4">
+                                        {isChatLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                                                <div className="w-8 h-8 border-4 border-slate-200 border-t-primary-500 rounded-full animate-spin mb-3"></div>
+                                                <p className="text-sm font-bold text-slate-500">대화 기록을 불러오는 중...</p>
+                                            </div>
+                                        ) : chatHistory.length === 0 ? (
+                                            <div className="text-center py-10 text-slate-400 font-medium">
+                                                {diary?.sessionSeq ? "대화 내역이 없습니다." : "채팅으로 작성된 일기가 아닙니다. 📝"}
+                                            </div>
+                                        ) : (
+                                            chatHistory.map((chat) => {
+                                                // Role 판별 (User, user 모두 처리)
+                                                const isUser = chat.role.toLowerCase() === "user";
+
+                                                return (
+                                                    <div key={chat.messageSeq} className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
+                                                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed shadow-sm border ${isUser
+                                                                ? "bg-primary-600 text-white border-primary-500 rounded-tr-sm"
+                                                                : "bg-white text-slate-700 border-slate-200 rounded-tl-sm"
+                                                            }`}>
+                                                            {chat.content}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ✨ 토글 플로팅 버튼 (오른쪽 아래 고정) */}
+                            <button
+                                onClick={handleToggleChat}
+                                className="absolute bottom-6 right-6 w-12 h-12 bg-primary-600 text-white rounded-full shadow-lg shadow-primary-200 hover:bg-primary-700 hover:scale-105 transition-all flex items-center justify-center z-20 group"
+                                title={showChat ? "일기 보기" : "대화 내역 보기"}
+                            >
+                                <span className="text-xl transform transition-transform group-hover:-rotate-12">
+                                    {showChat ? "📝" : "💬"}
+                                </span>
+                            </button>
+
                         </div>
                     </div>
                 </div>
