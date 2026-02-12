@@ -23,21 +23,21 @@ function CharacterSelectPage() {
     {
       seq: 1,
       name: "햄스터",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png",
+      img: "/characters/Hamster.png",
       desc: "주인님 기분이 제일 중요해! 🐹 논리보다는 감정에 깊이 공감해주는 사랑스러운 친구예요.",
       keywords: ["#공감요정", "#무한긍정", "#애교만점"]
     },
     {
       seq: 2,
       name: "여우",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png",
+      img: "/characters/Fox.png",
       desc: "징징거릴 시간에 해결책을 찾아. 😏 감정보다 이성을 중시하는 시니컬한 분석가예요.",
       keywords: ["#팩트폭력", "#냉철분석", "#효율중시"]
     },
     {
       seq: 3,
       name: "판다",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png",
+      img: "/characters/Panda.png",
       desc: "허허, 실수는 누구나 하는 법. 🍵 따뜻한 위로와 현실적인 조언을 함께 주는 든든한 멘토예요.",
       keywords: ["#지혜로움", "#멘토", "#따뜻한위로"]
     },
@@ -178,7 +178,7 @@ function CharacterSelectPage() {
                         peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
                         peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold"
           >
-            캐릭터 이름 (애칭)
+            캐릭터 이름
           </label>
         </div>
 

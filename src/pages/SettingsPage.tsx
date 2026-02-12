@@ -28,22 +28,21 @@ export default function SettingsPage() {
       seq: 1,
       name: "햄스터",
       desc: "작은 일도 놓치지 않고 꼼꼼하게 기록해주는 성실한 햄스터예요!",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png"
+      img: "/characters/Hamster.png"
     },
     {
       seq: 2,
       name: "여우",
       desc: "당신의 하루를 지혜롭고 센스 있게 정리해주는 똑똑한 여우예요.",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png"
+      img: "/characters/Fox.png"
     },
     {
       seq: 3,
       name: "판다",
       desc: "느긋한 마음으로 당신의 고민을 들어주는 다정한 판다예요.",
-      img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png"
+      img: "/characters/Panda.png"
     },
   ];
-
   const myCharacter = characters.find(c => c.seq === user?.characterSeq) || characters[0];
   const selectedCharacterInfo = characters.find(c => c.seq === selectedCharSeq) || characters[0];
 

@@ -33,16 +33,16 @@ const VoiceChatPage = () => {
             case 1: return "hamster";
             case 2: return "fox";
             case 3: return "panda";
-            default: return "rabbit";
+            default: return "cat";
         }
     };
     const characterType = getCharacterType(user?.characterSeq);
 
     const characterImages: Record<string, string> = {
-        hamster: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png",
-        fox: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png",
-        panda: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png",
-        rabbit: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png",
+        hamster: "/characters/Hamster.png",
+        fox: "/characters/Fox.png",
+        panda: "/characters/Panda.png",
+        cat: "/characters/Cat.png",
     };
     const currentProfileImg = characterImages[characterType] || characterImages.rabbit;
 

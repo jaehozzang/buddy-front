@@ -20,13 +20,10 @@ export default function Header() {
     }
 
     const characterImages: Record<string, string> = {
-        hamster: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png",
-        fox: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Fox.png",
-        lion: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Lion.png",
-        panda: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Panda.png",
-        cat: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat%20Face.png",
-        dog: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Dog%20Face.png",
-        rabbit: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png",
+        hamster: "/characters/Hamster.png",
+        fox: "/characters/Fox.png",
+        panda: "/characters/Panda.png",
+        cat: "/characters/Cat.png",
     };
 
     const getCharacterType = (seq?: number) => {
@@ -34,7 +31,7 @@ export default function Header() {
             case 1: return "hamster";
             case 2: return "fox";
             case 3: return "panda";
-            default: return "rabbit";
+            default: return "cat"; // 캐릭터가 없거나 오류 시 고양이
         }
     };
 
