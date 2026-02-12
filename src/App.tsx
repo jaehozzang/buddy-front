@@ -30,11 +30,9 @@ function App() {
   const location = useLocation();
   const isAppRoute = location.pathname.startsWith("/app");
 
-  // ✨ [핵심 수정] getState() 대신 훅을 사용해 상태 변경을 실시간 구독(Subscribe)합니다.
-  const { isLoggedIn, user } = useAuthStore((state) => ({
-    isLoggedIn: state.isLoggedIn,
-    user: state.user,
-  }));
+  // ✨ [수정] 무한 렌더링 방지를 위해 상태를 개별적으로 구독합니다.
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const user = useAuthStore((state) => state.user);
 
   const theme = useThemeStore((state) => state.theme);
 
@@ -92,11 +90,11 @@ function App() {
             path="/app"
             element={
               isLoggedIn ? (
-                // ✨ 수정됨: user 상태가 바뀌면 즉시 화면이 갱신되어 올바른 곳으로 보냅니다.
+                // user 상태가 바뀌면 즉시 화면이 갱신되어 올바른 곳으로 보냅니다.
                 hasValidCharacter ? (
                   <MainLayout />
                 ) : (
-                  // 캐릭터가 없으면 캐릭터 선택 페이지로 이동 (닉네임 페이지 아님!)
+                  // 캐릭터가 없으면 캐릭터 선택 페이지로 이동
                   <Navigate to="/auth/register/character" replace />
                 )
               ) : (
