@@ -167,7 +167,7 @@ function RegisterPage() {
                 <input
                   type="text"
                   id="verificationCode"
-                  maxLength={7}
+                  maxLength={6}
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                   className="peer w-full rounded-md bg-white border border-primary-200 pl-4 pr-12 py-3 

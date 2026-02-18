@@ -149,7 +149,7 @@ const HomePage = () => {
                 // ✨ [수정] 버튼 스타일: bg-white -> dark:bg-slate-700, text-primary-500 -> dark:text-primary-400, border
                 className="text-xs text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium bg-white dark:bg-slate-700 px-2 py-1 rounded-lg shadow-sm border border-primary-100 dark:border-slate-600 transition-colors"
               >
-                전체보기
+                전체 보기
               </button>
             </div>
 

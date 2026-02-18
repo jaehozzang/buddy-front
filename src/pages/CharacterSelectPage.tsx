@@ -182,7 +182,7 @@ function CharacterSelectPage() {
                         peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
                         peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold
                         
-                        dark:bg-slate-900 dark:peer-focus:bg-slate-900 dark:peer-[:not(:placeholder-shown)]:bg-slate-900
+                        dark:bg-slate-800 dark:peer-focus:bg-slate-900 dark:peer-[:not(:placeholder-shown)]:bg-slate-900
                         dark:peer-focus:text-primary-400 dark:peer-[:not(:placeholder-shown)]:text-primary-400"
           >
             캐릭터 이름

@@ -102,7 +102,7 @@ function LoginPage() {
               peer-placeholder-shown:top-3 peer-placeholder-shown:left-8 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
               peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold
               
-              dark:bg-slate-800 dark:peer-focus:bg-slate-800 dark:peer-[:not(:placeholder-shown)]:bg-slate-800 
+              dark:bg-slate-900 dark:peer-focus:bg-slate-800 dark:peer-[:not(:placeholder-shown)]:bg-slate-800 
               dark:peer-focus:text-primary-400 dark:peer-[:not(:placeholder-shown)]:text-primary-400"
             >
               이메일
@@ -152,7 +152,7 @@ function LoginPage() {
               peer-placeholder-shown:top-3 peer-placeholder-shown:left-8 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
               peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-primary-600 peer-[:not(:placeholder-shown)]:font-bold
               
-              dark:bg-slate-800 dark:peer-focus:bg-slate-800 dark:peer-[:not(:placeholder-shown)]:bg-slate-800 
+              dark:bg-slate-900 dark:peer-focus:bg-slate-800 dark:peer-[:not(:placeholder-shown)]:bg-slate-800 
               dark:peer-focus:text-primary-400 dark:peer-[:not(:placeholder-shown)]:text-primary-400"
             >
               비밀번호
