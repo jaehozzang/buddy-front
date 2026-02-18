@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"; // useState 삭제
 import HeaderButton from "./HeaderButton";
 import { useAuthStore } from "../store/useAuthStore";
-import { useSearchParams } from "react-router-dom";
 
 export default function Header() {
     const location = useLocation();
@@ -10,7 +8,8 @@ export default function Header() {
     const { user, logout } = useAuthStore();
 
     const isAppRoute = location.pathname.startsWith("/app");
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    // 🗑️ [삭제] 불필요한 State 제거
+    // const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const [searchParams] = useSearchParams();
 
@@ -31,17 +30,17 @@ export default function Header() {
             case 1: return "hamster";
             case 2: return "fox";
             case 3: return "panda";
-            default: return "cat"; // 기본값 고양이
+            default: return "cat";
         }
     };
 
-    // --- 1) 로그인 전 / 인트로 헤더 ---
+    // --- 1) 로그인 전 헤더 ---
     if (!isAppRoute) {
         return (
             <header className="h-[72px] bg-white border-b border-slate-200 sticky top-0 z-50 bg-white/80 backdrop-blur-md">
                 <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
-                        {/* 🗑️ 파비콘 이미지 제거됨 */}
+                        {/* 파비콘 제거됨 */}
                         <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                             My <span className="text-primary-600">Buddy</span>
                         </h1>
@@ -60,10 +59,9 @@ export default function Header() {
         );
     }
 
-    // --- 2) 로그인 후 헤더 (/app 내부) ---
+    // --- 2) 로그인 후 헤더 ---
 
     const myCharType = getCharacterType(user?.characterSeq);
-    // ✨ [수정] rabbit은 목록에 없으므로 안전하게 cat이나 hamster로 변경
     const currentProfileImg = characterImages[myCharType] || characterImages.cat;
 
     const handleLogout = () => {
@@ -78,7 +76,6 @@ export default function Header() {
             <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
 
                 <Link to="/app/home" className="flex items-center gap-2 group">
-                    {/* 🗑️ 파비콘 이미지 제거됨 */}
                     <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                         My <span className="text-primary-600">Buddy</span>
                     </h1>
@@ -101,41 +98,39 @@ export default function Header() {
                         대화하기
                     </HeaderButton>
 
-                    {/* 프로필 호버 메뉴 */}
-                    <div
-                        className="relative py-2 h-full flex items-center"
-                        onMouseEnter={() => setIsMenuOpen(true)}
-                        onMouseLeave={() => setIsMenuOpen(false)}
-                    >
+                    {/* ✨ [수정] group 클래스로 CSS 호버 처리 (JS 이벤트 제거) */}
+                    <div className="group relative py-2 h-full flex items-center">
                         <div className="w-9 h-9 bg-slate-50 rounded-full border border-slate-200 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary-200 transition-all overflow-hidden">
                             <img src={currentProfileImg} alt="profile" className="w-full h-full object-cover" />
                         </div>
 
-                        {/* 드롭다운 메뉴 */}
-                        {isMenuOpen && (
-                            <div className="absolute right-0 top-[50px] pt-2 w-48 animate-[fade-in-up_0.2s]">
-                                <div className="bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
-                                    <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/50">
-                                        <p className="text-xs text-slate-400 font-medium">Signed in as</p>
-                                        <p className="text-sm font-bold text-slate-800 truncate">{user?.nickname}</p>
-                                    </div>
-                                    <div className="py-1">
-                                        <Link
-                                            to="/app/settings"
-                                            className="block px-4 py-2 text-sm text-slate-600 hover:bg-primary-50 hover:text-primary-700 transition-colors"
-                                        >
-                                            ⚙️ Settings
-                                        </Link>
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                                        >
-                                            🚪 Logout
-                                        </button>
-                                    </div>
+                        {/* ✨ [수정] group-hover로 제어 (평소엔 숨김 -> 호버시 보임) */}
+                        <div className="absolute right-0 top-[50px] pt-2 w-48 
+                            opacity-0 invisible translate-y-2
+                            group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
+                            transition-all duration-200 ease-out z-50">
+
+                            <div className="bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
+                                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/50">
+                                    <p className="text-xs text-slate-400 font-medium">Signed in as</p>
+                                    <p className="text-sm font-bold text-slate-800 truncate">{user?.nickname}</p>
+                                </div>
+                                <div className="py-1">
+                                    <Link
+                                        to="/app/settings"
+                                        className="block px-4 py-2 text-sm text-slate-600 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                                    >
+                                        ⚙️ Settings
+                                    </Link>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                                    >
+                                        🚪 Logout
+                                    </button>
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>
