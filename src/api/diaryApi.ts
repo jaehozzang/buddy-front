@@ -68,7 +68,7 @@ export const diaryApi = {
             title: string;
             content: string;
             tags: { tagSeq: number; name: string }[];
-        }>>('/api/v1/diary/from-chat', { sessionId });
+        }>>('/api/v1/diaries/from-chat', { sessionId });
         return response.data;
     },
 
