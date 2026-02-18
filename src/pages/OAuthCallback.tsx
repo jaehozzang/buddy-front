@@ -18,53 +18,43 @@ export default function OAuthCallback() {
 
         const processCallback = async () => {
             const mode = searchParams.get("mode");
-
-            // ---------------------------------------------------------
-            // 1. 로그인 성공 처리
-            // ---------------------------------------------------------
             const accessToken = searchParams.get("accessToken");
             const refreshToken = searchParams.get("refreshToken");
             const isNewMemberStr = searchParams.get("isNewMember"); // "true" or "false"
 
+            // ---------------------------------------------------------
+            // 1. 로그인 성공 처리
+            // ---------------------------------------------------------
             if (accessToken && refreshToken) {
                 setTokens(accessToken, refreshToken);
 
+                // 🚨 [긴급 수정] 신규 회원이면 API 호출 없이 바로 이동! (500 에러 방지)
+                if (isNewMemberStr === "true") {
+                    console.log("🆕 신규 회원입니다! (프로필 조회 건너뜀)");
+                    navigate("/auth/register/character", { replace: true });
+                    return;
+                }
+
+                // 기존 회원일 때만 프로필 조회 시도
                 try {
-                    // (1) 내 최신 정보 가져오기
                     const response = await memberApi.getMe();
-                    const userData = response.result;
+                    if (response.result) {
+                        setUser(response.result);
 
-                    if (userData) {
-                        setUser(userData);
-
-                        // ✨ [완벽한 로직]
-                        // 1. 신규 회원이면? -> 무조건 캐릭터 선택 (기본값이 1이어도 선택하게 해줘야 함)
-                        if (isNewMemberStr === "true") {
-                            console.log("🆕 신규 회원입니다! 캐릭터 선택 페이지로 이동합니다.");
+                        // 혹시 모르니 여기서도 캐릭터 체크 (안전장치)
+                        const hasChar = [1, 2, 3].includes(response.result.characterSeq);
+                        if (hasChar) {
+                            console.log("✅ 기존 회원 확인 완료! 홈으로 이동");
+                            navigate("/app/home", { replace: true });
+                        } else {
+                            // 기존 회원이라는데 캐릭터가 없다? -> 설정 페이지로
                             navigate("/auth/register/character", { replace: true });
-                            return;
                         }
-
-                        // 2. 신규 회원은 아닌데(기존 회원), 캐릭터 정보가 깨져있다? -> 캐릭터 선택으로 구출
-                        const hasValidCharacter = [1, 2, 3].includes(userData.characterSeq);
-                        if (!hasValidCharacter) {
-                            console.log("⚠️ 기존 회원이지만 캐릭터 정보가 없습니다. 설정 페이지로 이동합니다.");
-                            navigate("/auth/register/character", { replace: true });
-                            return;
-                        }
-
-                        // 3. 다 통과했으면 -> 홈으로
-                        console.log("✅ 로그인 성공! 홈으로 이동합니다.");
-                        navigate("/app/home", { replace: true });
-
-                    } else {
-                        // 유저 정보 로드 실패 시 홈으로 (App.tsx가 처리하도록)
-                        navigate("/app/home", { replace: true });
                     }
-
                 } catch (error) {
                     console.error("정보 로드 실패:", error);
-                    navigate("/auth/login", { replace: true });
+                    // 에러가 나더라도 토큰은 있으니 일단 홈으로 보냄 (재로그인 방지)
+                    navigate("/app/home", { replace: true });
                 }
                 return;
             }
@@ -88,12 +78,14 @@ export default function OAuthCallback() {
 
                             if (newAccess && newRefresh) {
                                 setTokens(newAccess, newRefresh);
-                                const meRes = await memberApi.getMe();
-                                setUser(meRes.result);
-
-                                // 연동 유저도 캐릭터 체크
-                                const hasChar = [1, 2, 3].includes(meRes.result.characterSeq);
-                                navigate(hasChar ? "/app/home" : "/auth/register/character", { replace: true });
+                                // 연동 성공 시에는 정보 조회를 시도해봄 (이미 있는 계정이니 성공할 확률 높음)
+                                try {
+                                    const meRes = await memberApi.getMe();
+                                    setUser(meRes.result);
+                                    navigate("/app/home", { replace: true });
+                                } catch (e) {
+                                    navigate("/app/home", { replace: true });
+                                }
                             }
                         } catch (error) {
                             alert("계정 연동에 실패했습니다.");
