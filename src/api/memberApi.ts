@@ -44,7 +44,8 @@ export const memberApi = {
 
     // 회원 탈퇴
     deleteAccount: async () => {
-        const response = await tokenApi.delete<AuthResponse<string>>('/api/v1/members/delete-account');
+        // 명세서: DELETE /api/v1/members/me
+        const response = await tokenApi.delete<AuthResponse<string>>('/api/v1/members/me');
         return response.data;
     }
 };

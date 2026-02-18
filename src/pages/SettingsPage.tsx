@@ -100,6 +100,28 @@ export default function SettingsPage() {
     }
   };
 
+  // ✨ [추가] 3. 회원 탈퇴 핸들러
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("정말 탈퇴하시겠습니까?\n모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.")) {
+      return;
+    }
+
+    try {
+      // API 호출 (명세서: DELETE /api/v1/members/me)
+      await memberApi.deleteAccount();
+
+      alert("탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다. 🙇‍♂️");
+
+      // 로그아웃 처리 및 메인으로 이동
+      logout();
+      window.location.href = "/";
+
+    } catch (error) {
+      console.error("탈퇴 실패", error);
+      alert("회원 탈퇴 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
   const handleLogout = () => {
     if (confirm("로그아웃 하시겠습니까?")) {
       logout();
@@ -326,7 +348,8 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-400 mt-0.5">모든 데이터가 영구적으로 삭제됩니다.</p>
               </div>
               <button
-                onClick={() => alert("탈퇴 기능은 고객센터에 문의해주세요. (준비중)")}
+                // ✨ [수정] 탈퇴 핸들러 연결
+                onClick={handleDeleteAccount}
                 className="text-xs font-bold text-red-500 bg-white border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50 transition"
               >
                 탈퇴하기
