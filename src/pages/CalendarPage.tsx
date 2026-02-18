@@ -270,7 +270,7 @@ export default function CalendarPage() {
       <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 flex flex-col h-[45%] md:h-full overflow-hidden transition-colors">
 
         {/* 리스트 헤더 */}
-        {/* ✨ [수정] 헤더 배경: bg-white -> dark:bg-slate-800, border */}
+        {/* ✨ [수정] 헤더 배경: bg-white -> dark:bg-slate-800, border, h-[]: 헤더높이 */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between flex-shrink-0 z-10 shadow-sm h-[73px]">
           <div>
             {/* ✨ [수정] 날짜 텍스트: text-slate-800 -> dark:text-white */}
