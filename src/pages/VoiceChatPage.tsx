@@ -44,7 +44,7 @@ const VoiceChatPage = () => {
         panda: "/characters/Panda.png",
         cat: "/characters/Cat.png",
     };
-    const currentProfileImg = characterImages[characterType] || characterImages.rabbit;
+    const currentProfileImg = characterImages[characterType] || characterImages.cat; // rabbit -> cat (기본값 수정)
 
     const speak = (text: string) => {
         window.speechSynthesis.cancel();
@@ -123,12 +123,14 @@ const VoiceChatPage = () => {
     };
 
     return (
-        <div className="h-full flex flex-col items-center bg-white relative overflow-hidden">
+        // ✨ [수정] 전체 배경: bg-white -> dark:bg-slate-900
+        <div className="h-full flex flex-col items-center bg-white dark:bg-slate-900 relative overflow-hidden transition-colors duration-300">
 
             {/* 뒤로가기 버튼 */}
             <button
                 onClick={() => navigate('/app/home')}
-                className="absolute top-4 left-4 z-20 flex items-center gap-1 text-slate-500 hover:text-primary-600 transition-colors bg-white/80 px-3 py-1 rounded-full shadow-sm"
+                // ✨ [수정] 버튼 스타일: bg-white/80 -> dark:bg-slate-800/80, 텍스트 색상
+                className="absolute top-4 left-4 z-20 flex items-center gap-1 text-slate-500 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 transition-colors bg-white/80 dark:bg-slate-800/80 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm"
             >
                 <span>←</span>
                 <span className="text-sm font-medium">홈으로</span>
@@ -137,14 +139,16 @@ const VoiceChatPage = () => {
             {/* ✨ [추가] 키보드 대화 버튼 (우측 상단) */}
             <button
                 onClick={() => navigate('/app/chat')}
-                className="absolute top-4 right-4 z-20 flex items-center gap-1 text-primary-600 hover:text-primary-700 transition-colors bg-white/80 px-3 py-1.5 rounded-full shadow-sm border border-primary-100"
+                // ✨ [수정] 버튼 스타일: bg-white/80 -> dark:bg-slate-800/80, border
+                className="absolute top-4 right-4 z-20 flex items-center gap-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-full shadow-sm border border-primary-100 dark:border-slate-700 backdrop-blur-sm"
             >
                 <span className="text-sm font-bold">키보드 대화 ⌨️</span>
             </button>
 
-            {/* 상단 텍스트 */}
+            {/* 상단 텍스트 (AI 메시지) */}
             <div className="mt-12 px-8 text-center animate-[fade-in-down_0.5s]">
-                <h2 className="text-xl font-bold text-slate-800 leading-snug">
+                {/* ✨ [수정] AI 메시지 텍스트: text-slate-800 -> dark:text-white */}
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-snug">
                     {isLoading ? "생각하는 중... 🤔" : aiMessage}
                 </h2>
             </div>
@@ -153,14 +157,15 @@ const VoiceChatPage = () => {
             <div className="flex-1 flex items-center justify-center w-full relative mt-8 pb-8">
                 {isListening && (
                     <>
-                        <div className="absolute w-56 h-56 bg-primary-100 rounded-full animate-ping opacity-20"></div>
-                        <div className="absolute w-40 h-40 bg-primary-200 rounded-full animate-pulse opacity-30"></div>
+                        {/* ✨ [수정] 핑 애니메이션 색상: opacity 조절 */}
+                        <div className="absolute w-56 h-56 bg-primary-100 dark:bg-primary-900/40 rounded-full animate-ping opacity-20 dark:opacity-30"></div>
+                        <div className="absolute w-40 h-40 bg-primary-200 dark:bg-primary-800/40 rounded-full animate-pulse opacity-30 dark:opacity-40"></div>
                     </>
                 )}
                 <div className={`relative w-48 h-48 transition-transform duration-500 
-          ${isListening ? "scale-110" : "scale-100"}
-          ${isLoading ? "animate-bounce" : ""}
-        `}>
+                    ${isListening ? "scale-110" : "scale-100"}
+                    ${isLoading ? "animate-bounce" : ""}
+                `}>
                     <img
                         src={currentProfileImg}
                         alt="character"
@@ -170,27 +175,37 @@ const VoiceChatPage = () => {
             </div>
 
             {/* 하단 컨트롤 영역 */}
-            <div className="w-[calc(100%-2rem)] mx-auto mb-4 bg-slate-50 rounded-[2.5rem] shadow-lg p-6 flex flex-col items-center gap-5 pb-8">
-                <div className="w-full min-h-[50px] max-h-[90px] overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 text-center flex items-center justify-center">
-                    <p className={`text-sm font-medium leading-relaxed ${isListening ? "text-primary-600" : "text-slate-700"}`}>
+            {/* ✨ [수정] 컨트롤 박스: bg-slate-50 -> dark:bg-slate-800 */}
+            <div className="w-[calc(100%-2rem)] mx-auto mb-4 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] shadow-lg dark:shadow-black/20 p-6 flex flex-col items-center gap-5 pb-8 transition-colors duration-300">
+
+                {/* 텍스트 표시 영역 */}
+                {/* ✨ [수정] 텍스트 박스: bg-white -> dark:bg-slate-700, border */}
+                <div className="w-full min-h-[50px] max-h-[90px] overflow-y-auto bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl p-4 text-center flex items-center justify-center transition-colors">
+                    {/* ✨ [수정] 내 말 텍스트: text-slate-700 -> dark:text-slate-200 */}
+                    <p className={`text-sm font-medium leading-relaxed ${isListening ? "text-primary-600 dark:text-primary-400" : "text-slate-700 dark:text-slate-200"}`}>
                         {isListening ? `"${myTranscript}"` : myTranscript}
                     </p>
                 </div>
+
+                {/* 마이크 버튼 */}
                 <button
                     onClick={toggleListening}
                     disabled={isLoading}
                     className={`relative w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg transition-all duration-300 transform active:scale-95
-            ${isLoading
-                            ? "bg-slate-300 cursor-not-allowed text-slate-500"
+                        ${isLoading
+                            ? "bg-slate-300 dark:bg-slate-600 cursor-not-allowed text-slate-500 dark:text-slate-400"
                             : isListening
-                                ? "bg-red-500 text-white shadow-red-200 ring-4 ring-red-100 rotate-180"
-                                : "bg-primary-600 text-white shadow-primary-200 hover:bg-primary-700 hover:-translate-y-1"
+                                ? "bg-red-500 text-white shadow-red-200 dark:shadow-none ring-4 ring-red-100 dark:ring-red-900/50 rotate-180"
+                                : "bg-primary-600 text-white shadow-primary-200 dark:shadow-none hover:bg-primary-700 hover:-translate-y-1"
                         }
-          `}
+                    `}
                 >
                     {isLoading ? "⏳" : (isListening ? "⏹" : "🎙️")}
                 </button>
-                <p className="text-xs text-slate-400 font-medium">
+
+                {/* 하단 안내 문구 */}
+                {/* ✨ [수정] 안내 문구: text-slate-400 -> dark:text-slate-500 */}
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
                     {isLoading ? "대답을 준비하고 있어요" : (isListening ? "말이 끝나면 전송돼요" : "터치해서 말하기")}
                 </p>
             </div>

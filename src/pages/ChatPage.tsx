@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { useChatStore } from "../store/useChatStore"; // ✨ 추가
+import { useChatStore } from "../store/useChatStore";
 import { chatApi } from "../api/chatApi";
 import { IS_TEST_MODE } from "../config";
 
@@ -29,19 +29,16 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
     const [searchParams] = useSearchParams();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { user } = useAuthStore();
-
-    // ✨ [변경] 전역 스토어에서 sessionId 관리
     const { sessionId, setSessionId } = useChatStore();
 
     const isMiniMode = propIsMiniMode || searchParams.get("mode") === "mini";
     const containerStyleClass = isMiniMode
-        ? "h-[100vh] sm:h-[80vh] sm:rounded-[40px] shadow-2xl border border-slate-200 overflow-hidden"
-        : "h-[80vh] rounded-[40px] shadow-2xl border border-slate-200 overflow-hidden";
+        ? "h-[100vh] sm:h-[80vh] sm:rounded-[40px] shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+        : "h-[80vh] rounded-[40px] shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden";
 
     const myNickname = user?.nickname || "친구";
     const myBuddyName = user?.characterNickname || "Buddy";
 
-    // 캐릭터 이미지 로직 (기존 동일)
     const getCharacterType = (seq?: number) => {
         switch (seq) {
             case 1: return "hamster";
@@ -57,14 +54,12 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
         panda: "/characters/Panda.png",
         cat: "/characters/Cat.png",
     };
-    const currentProfileImg = characterImages[myCharType] || characterImages.rabbit;
+    const currentProfileImg = characterImages[myCharType] || characterImages.cat; // rabbit -> cat
 
-    // 초기 메시지 (세션이 없을 때만 표시)
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
 
-    // ✨ [추가] 이전 대화 내역 불러오기
     useEffect(() => {
         const loadHistory = async () => {
             if (sessionId === 0) {
@@ -86,20 +81,15 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                         sender: (item.role || "").toUpperCase() === "USER" ? "user" : "character",
                         timestamp: new Date(item.createdAt)
                     }));
-
-                    // ⚡ [핵심 수정] 시간 순서대로 정렬 (옛날 -> 최신)
-                    // 이게 없으면 최신 메시지가 먼저 나와서 대화가 꼬여 보입니다.
                     formattedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
                     setMessages(formattedMessages);
                 }
             } catch (error) {
                 console.error("이전 대화 불러오기 실패", error);
             }
         };
-
         loadHistory();
-    }, [sessionId]); // sessionId가 바뀔 때마다 실행
+    }, [sessionId]);
 
     const formatTime = (date: Date) => {
         return new Intl.DateTimeFormat('ko-KR', {
@@ -132,16 +122,14 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
 
         try {
             if (IS_TEST_MODE) {
-                // ... 테스트 모드 로직 ...
+                // 테스트 로직 생략
             } else {
                 const requestSessionId = sessionId === 0 ? 0 : sessionId;
-
                 const response = await chatApi.sendMessage({
                     sessionId: requestSessionId,
                     content: userText
                 });
 
-                // ✨ 세션 ID 업데이트
                 if (response.result.sessionId && response.result.sessionId !== sessionId) {
                     setSessionId(response.result.sessionId);
                 }
@@ -167,50 +155,45 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
         }
     };
 
-    // 🚀 [수정] 대화 종료 핸들러
     const handleEndConversation = async () => {
         if (messages.length < 2) {
             alert("일기를 쓰기엔 대화가 너무 짧아요!");
             return;
         }
-
         if (sessionId === 0) {
             alert("서버와 연결된 대화 내용이 없습니다.");
             return;
         }
-
-        // ✨ [수정 포인트] 
-        // 기존: navigate("/app/diary/new", ... 
-        // 변경: navigate("/app/calendar", ... 
-        // 이유: 이제 일기 작성창은 캘린더 페이지 안에 팝업으로 뜨니까요!
         navigate("/app/calendar", {
             state: {
-                sessionId: sessionId, // 세션 ID를 캘린더로 전달
+                sessionId: sessionId,
                 date: new Date().toISOString().split("T")[0]
             }
         });
-
-        // 전역 스토어 초기화 (이건 그대로 유지)
         setSessionId(0);
     };
 
     return (
         <>
             <style>{slideUpAnimation}</style>
-            <div className={`flex flex-col relative bg-slate-50 ${containerStyleClass}`}>
+            {/* ✨ [수정] 전체 배경: bg-slate-50 -> dark:bg-slate-900 */}
+            <div className={`flex flex-col relative bg-slate-50 dark:bg-slate-900 transition-colors duration-300 ${containerStyleClass}`}>
+
                 {/* 헤더 */}
-                <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 sticky top-0 z-10">
+                {/* ✨ [수정] 헤더 스타일: bg-white -> dark:bg-slate-800, border */}
+                <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 sticky top-0 z-10 transition-colors">
                     <div className="flex items-center gap-3">
-                        {/* 뒤로가기 버튼 추가 (VoiceChat으로 돌아가기 쉽게) */}
-                        <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-slate-600 sm:hidden">
+                        <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 sm:hidden">
                             ←
                         </button>
-                        <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 overflow-hidden">
+                        {/* ✨ [수정] 프로필 테두리: border-slate-200 -> dark:border-slate-600 */}
+                        <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 overflow-hidden">
                             <img src={currentProfileImg} alt="char" className="w-full h-full object-contain p-1" />
                         </div>
                         <div>
-                            <h2 className="text-sm font-bold text-slate-800">{myBuddyName}</h2>
-                            <p className="text-xs text-primary-500 font-medium">
+                            {/* ✨ [수정] 이름: text-slate-800 -> dark:text-white */}
+                            <h2 className="text-sm font-bold text-slate-800 dark:text-white">{myBuddyName}</h2>
+                            <p className="text-xs text-primary-500 dark:text-primary-400 font-medium">
                                 {sessionId > 0 ? "대화 이어지는 중..." : "대화 중..."}
                             </p>
                         </div>
@@ -218,14 +201,15 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
 
                     <button
                         onClick={handleEndConversation}
-                        className="px-4 py-2 bg-white border border-primary-200 text-primary-600 text-xs font-bold rounded-full 
-                        hover:bg-primary-50 transition shadow-sm hover:shadow-md disabled:opacity-50"
+                        // ✨ [수정] 종료 버튼: bg-white -> dark:bg-slate-700, border
+                        className="px-4 py-2 bg-white dark:bg-slate-700 border border-primary-200 dark:border-slate-600 text-primary-600 dark:text-primary-300 text-xs font-bold rounded-full 
+                        hover:bg-primary-50 dark:hover:bg-slate-600 transition shadow-sm hover:shadow-md disabled:opacity-50"
                     >
                         오늘 대화 종료하기 ✨
                     </button>
                 </div>
 
-                {/* 메시지 영역 (기존 디자인 유지) */}
+                {/* 메시지 영역 */}
                 <div className={`flex-1 overflow-y-auto p-6 custom-scrollbar ${isMiniMode ? 'pt-4' : ''}`}>
                     <div className="max-w-4xl mx-auto space-y-6">
                         {messages.map((msg) => {
@@ -236,27 +220,32 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                                     className={`flex ${isMe ? "justify-end" : "justify-start"} items-start gap-3 animate-slide-up`}
                                 >
                                     {!isMe && (
-                                        <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex-shrink-0 overflow-hidden shadow-sm mt-1">
+                                        // ✨ [수정] 상대방 프로필 배경: bg-white -> dark:bg-slate-800
+                                        <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex-shrink-0 overflow-hidden shadow-sm mt-1">
                                             <img src={currentProfileImg} alt="bot" className="w-full h-full object-contain p-1" />
                                         </div>
                                     )}
 
                                     <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && (
-                                            <span className="text-[11px] text-slate-500 font-bold mb-1 ml-1">
+                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mb-1 ml-1">
                                                 {myBuddyName}
                                             </span>
                                         )}
                                         <div className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                                             <div
+                                                // ✨ [수정] 말풍선 스타일
+                                                // User: bg-primary-600 (유지)
+                                                // Buddy: bg-white -> dark:bg-slate-700, text-slate-700 -> dark:text-slate-200, border
                                                 className={`px-5 py-3 text-sm leading-relaxed shadow-sm max-w-[80%] ${isMe
-                                                    ? "bg-primary-600 text-white rounded-2xl rounded-tr-none"
-                                                    : "bg-white text-slate-700 border border-slate-100 rounded-2xl rounded-tl-none"
+                                                    ? "bg-primary-600 text-white rounded-2xl rounded-tr-none dark:bg-primary-700"
+                                                    : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-600 rounded-2xl rounded-tl-none"
                                                     }`}
                                             >
                                                 {msg.text}
                                             </div>
-                                            <span className="text-[10px] text-slate-400 mb-1 flex-shrink-0 select-none">
+                                            {/* ✨ [수정] 시간 텍스트: text-slate-400 -> dark:text-slate-500 */}
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 mb-1 flex-shrink-0 select-none">
                                                 {formatTime(msg.timestamp)}
                                             </span>
                                         </div>
@@ -266,10 +255,11 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                         })}
                         {isTyping && (
                             <div className="flex justify-start items-end gap-3 animate-pulse">
-                                <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex-shrink-0 overflow-hidden">
+                                <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex-shrink-0 overflow-hidden">
                                     <img src={currentProfileImg} alt="bot" className="w-full h-full object-contain p-1" />
                                 </div>
-                                <div className="bg-slate-100 px-4 py-3 rounded-2xl rounded-tl-none text-slate-400 text-xs">
+                                {/* ✨ [수정] 타이핑 표시 박스: bg-slate-100 -> dark:bg-slate-700 */}
+                                <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 rounded-2xl rounded-tl-none text-slate-400 dark:text-slate-300 text-xs">
                                     {myBuddyName}가 생각하는 중... 🤔
                                 </div>
                             </div>
@@ -278,13 +268,15 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                     </div>
                 </div>
 
-                {/* 입력폼 (기존 디자인 유지) */}
-                <div className="flex-shrink-0 p-4 bg-white border-t border-gray-100">
+                {/* 입력폼 */}
+                {/* ✨ [수정] 입력 영역 배경: bg-white -> dark:bg-slate-800, border */}
+                <div className="flex-shrink-0 p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 transition-colors">
                     <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-2">
                         <input
                             type="text"
-                            className="flex-1 rounded-full bg-slate-100 px-5 py-3 text-sm text-slate-800 
-                            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all placeholder:text-slate-400"
+                            // ✨ [수정] 입력창 스타일: bg-slate-100 -> dark:bg-slate-700, text-slate-800 -> dark:text-white
+                            className="flex-1 rounded-full bg-slate-100 dark:bg-slate-700 px-5 py-3 text-sm text-slate-800 dark:text-white
+                            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white dark:focus:bg-slate-600 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             placeholder="메시지를 입력하세요..."
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
@@ -293,9 +285,10 @@ const ChatPage = ({ isMiniMode: propIsMiniMode = false }: ChatPageProps) => {
                         <button
                             type="submit"
                             disabled={!inputText.trim() || isTyping}
+                            // ✨ [수정] 전송 버튼 스타일
                             className={`w-11 h-11 rounded-full flex items-center justify-center transition-all shadow-md flex-shrink-0 ${!inputText.trim() || isTyping
-                                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                : "bg-primary-600 text-white hover:bg-primary-700 hover:scale-105"
+                                ? "bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                                : "bg-primary-600 text-white hover:bg-primary-700 dark:hover:bg-primary-500 hover:scale-105"
                                 }`}
                         >
                             ➤

@@ -1,4 +1,5 @@
-const colors = require("tailwindcss/colors");
+/** @type {import('tailwindcss').Config} */
+import colors from "tailwindcss/colors"; // 👈 require 대신 import 사용
 
 module.exports = {
   darkMode: "class", // ✨ [필수 추가] 이 설정이 있어야 다크모드 버튼이 작동합니다!
