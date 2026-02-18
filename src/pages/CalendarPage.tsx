@@ -271,7 +271,7 @@ export default function CalendarPage() {
 
         {/* 리스트 헤더 */}
         {/* ✨ [수정] 헤더 배경: bg-white -> dark:bg-slate-800, border */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between flex-shrink-0 z-10 shadow-sm h-[70px]">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between flex-shrink-0 z-10 shadow-sm h-[73px]">
           <div>
             {/* ✨ [수정] 날짜 텍스트: text-slate-800 -> dark:text-white */}
             <h3 className="text-sm font-bold text-slate-800 dark:text-white">
