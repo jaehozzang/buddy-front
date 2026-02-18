@@ -8,11 +8,16 @@ function CharacterSelectPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 1. 일반 가입 시 넘어오는 데이터 (소셜 로그인은 이게 없음)
   const { email, password, userNickname } = location.state || {};
-  const { user, isLoggedIn, setUser } = useAuthStore();
-  const isSocialUser = isLoggedIn && user;
+
+  // ✨ [핵심 변경] 일반 가입인지 판단하는 확실한 기준
+  const isNormalSignup = !!(email && password && userNickname);
+
+  const { user, setUser } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 캐릭터 데이터
   const characters = [
     {
       seq: 1,
@@ -40,11 +45,13 @@ function CharacterSelectPage() {
   const [index, setIndex] = useState(0);
   const [characterNickname, setCharacterNickname] = useState("");
 
+  // 소셜 유저라면 기존 닉네임 자동 채우기
   useEffect(() => {
-    if (isSocialUser && user?.characterNickname) {
+    // 일반 가입이 아니고, 유저 정보가 있다면 미리 채워줌
+    if (!isNormalSignup && user?.characterNickname) {
       setCharacterNickname(user.characterNickname);
     }
-  }, [isSocialUser, user]);
+  }, [isNormalSignup, user]);
 
   const prev = () => setIndex((prev) => (prev - 1 + characters.length) % characters.length);
   const next = () => setIndex((prev) => (prev + 1) % characters.length);
@@ -59,24 +66,15 @@ function CharacterSelectPage() {
     setIsSubmitting(true);
 
     try {
-      if (isSocialUser) {
-        await memberApi.updateCharacter({ characterSeq: selectedCharacter.seq });
-        await memberApi.updateCharacterName({ characterName: characterNickname });
-        if (user) {
-          setUser({
-            ...user,
-            characterSeq: selectedCharacter.seq,
-            characterNickname: characterNickname
-          });
-        }
-        alert("캐릭터 설정이 완료되었습니다! 🎉");
-        navigate("/app/home", { replace: true });
-      } else {
+      // 🚀 1. 일반 회원가입 유저일 경우 (우선 순위 체크!)
+      if (isNormalSignup) {
         if (!email || !password || !userNickname) {
-          alert("가입 정보가 부족합니다. 처음부터 다시 시도해주세요.");
+          // 혹시라도 새로고침해서 데이터 날아갔을 경우 방어
+          alert("가입 정보가 유실되었습니다. 처음부터 다시 시도해주세요.");
           navigate("/auth/register");
           return;
         }
+
         await memberApi.signup({
           email,
           password,
@@ -84,9 +82,31 @@ function CharacterSelectPage() {
           characterSeq: selectedCharacter.seq,
           characterNickname
         });
+
         alert("회원가입 완료! 로그인해주세요.");
         navigate("/auth/login");
       }
+      // 🚀 2. 소셜 로그인 유저 (또는 기존 유저의 캐릭터 변경)
+      else {
+        // (1) 캐릭터 종류 변경
+        await memberApi.updateCharacter({ characterSeq: selectedCharacter.seq });
+
+        // (2) 캐릭터 이름 변경
+        await memberApi.updateCharacterName({ characterName: characterNickname });
+
+        // (3) 스토어 정보 수동 업데이트 (화면 즉시 반영용)
+        if (user) {
+          setUser({
+            ...user,
+            characterSeq: selectedCharacter.seq,
+            characterNickname: characterNickname
+          });
+        }
+
+        alert("캐릭터 설정이 완료되었습니다! 🎉");
+        navigate("/app/home", { replace: true });
+      }
+
     } catch (error) {
       console.error(error);
       const err = error as AxiosError<{ message: string }>;
@@ -98,7 +118,6 @@ function CharacterSelectPage() {
   };
 
   return (
-    // ✨ [수정] 배경색: dark:bg-slate-900
     <div className="min-h-[calc(100vh-150px)] flex items-center justify-center bg-white dark:bg-slate-900 px-6 transition-colors duration-300">
       <div className="flex flex-col items-center text-center gap-4 w-full max-w-md">
 
@@ -127,9 +146,7 @@ function CharacterSelectPage() {
         </div>
 
         <div className="flex items-center justify-center gap-6 text-slate-700 w-full">
-          {/* ✨ [수정] 화살표 색상: dark:text-slate-600 */}
           <button onClick={prev} className="text-2xl text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors p-2">◀</button>
-          {/* ✨ [수정] 캐릭터 이름: dark:text-white */}
           <span className="text-xl font-bold tracking-widest uppercase min-w-[80px] dark:text-white">{characters[index].name}</span>
           <button onClick={next} className="text-2xl text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors p-2">▶</button>
         </div>
@@ -137,14 +154,12 @@ function CharacterSelectPage() {
         <div className="flex flex-col items-center gap-3 min-h-[90px] px-4">
           <div className="flex flex-wrap justify-center gap-2">
             {characters[index].keywords.map((keyword, i) => (
-              // ✨ [수정] 키워드 태그: dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800
               <span key={i} className="text-[10px] sm:text-xs font-bold text-primary-600 bg-primary-50 border border-primary-100 px-2.5 py-1 rounded-full
                 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800 transition-colors">
                 {keyword}
               </span>
             ))}
           </div>
-          {/* ✨ [수정] 설명 텍스트: dark:text-slate-400 */}
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 break-keep leading-relaxed max-w-[320px]">
             {characters[index].desc}
           </p>
@@ -156,7 +171,6 @@ function CharacterSelectPage() {
             id="characterNickname"
             value={characterNickname}
             onChange={(e) => setCharacterNickname(e.target.value)}
-            // ✨ [수정] 입력창 스타일 (다크모드)
             className="peer w-full rounded-xl bg-white border border-primary-200 px-4 py-3.5 
                         text-sm text-slate-700 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 placeholder-transparent
                         dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:focus:border-primary-500 dark:focus:ring-primary-900 transition-all"
@@ -164,7 +178,6 @@ function CharacterSelectPage() {
           />
           <label
             htmlFor="characterNickname"
-            // ✨ [수정] 라벨 배경색 (dark:bg-slate-900 -> 페이지 배경색과 맞춤)
             className="absolute left-4 top-3.5 text-sm text-slate-400 transition-all cursor-text bg-white px-1
                         peer-focus:-top-2.5 peer-focus:left-3 peer-focus:text-xs peer-focus:text-primary-600 peer-focus:font-bold
                         peer-placeholder-shown:top-3.5 peer-placeholder-shown:left-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-400
@@ -180,7 +193,6 @@ function CharacterSelectPage() {
         <button
           onClick={handleStart}
           disabled={isSubmitting}
-          // ✨ [수정] 버튼 그림자 제거 (다크모드)
           className={`w-full max-w-[320px] rounded-xl py-4 text-sm font-bold text-white tracking-wider shadow-lg dark:shadow-none transform transition-all mt-2
                     ${isSubmitting
               ? "bg-slate-400 dark:bg-slate-700 cursor-not-allowed"
@@ -189,7 +201,8 @@ function CharacterSelectPage() {
         >
           {isSubmitting
             ? "잠시만 기다려주세요... ⏳"
-            : (isSocialUser ? "캐릭터 설정 완료! 🎉" : "회원가입 완료하기 ✨")
+            // ✨ [수정] 버튼 텍스트도 명확하게 분기
+            : (isNormalSignup ? "회원가입 완료하기 ✨" : "캐릭터 설정 완료! 🎉")
           }
         </button>
 
