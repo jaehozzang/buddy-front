@@ -86,25 +86,24 @@ function CharacterSelectPage() {
         alert("회원가입 완료! 로그인해주세요.");
         navigate("/auth/login");
       }
-      // 🚀 2. 소셜 로그인 유저 (또는 기존 유저의 캐릭터 변경)
+      // 🚀 2. 소셜 로그인 유저 (여기가 문제였음!)
       else {
-        // (1) 캐릭터 종류 변경
+        // (1) 캐릭터 정보 서버에 업데이트
         await memberApi.updateCharacter({ characterSeq: selectedCharacter.seq });
-
-        // (2) 캐릭터 이름 변경
         await memberApi.updateCharacterName({ characterName: characterNickname });
 
-        // (3) 스토어 정보 수동 업데이트 (화면 즉시 반영용)
-        if (user) {
-          setUser({
-            ...user,
-            characterSeq: selectedCharacter.seq,
-            characterNickname: characterNickname
-          });
-        }
+        // ✨ [핵심 수정] 서버에서 최신 유저 정보를 가져와서 스토어에 박아버림!
+        // 이제 캐릭터 설정이 끝났으니 500 에러가 안 납니다.
+        const response = await memberApi.getMe(); // 혹은 getMemberInfo()
 
-        alert("캐릭터 설정이 완료되었습니다! 🎉");
-        navigate("/app/home", { replace: true });
+        if (response.result) {
+          setUser(response.result); // 스토어 갱신! (이제 App.tsx가 통과시켜줌)
+          alert("캐릭터 설정이 완료되었습니다! 🎉");
+          navigate("/app/home", { replace: true });
+        } else {
+          alert("정보 갱신에 실패했습니다. 다시 로그인해주세요.");
+          navigate("/auth/login");
+        }
       }
 
     } catch (error) {
