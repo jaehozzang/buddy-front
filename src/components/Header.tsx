@@ -14,7 +14,7 @@ export default function Header() {
 
     const [searchParams] = useSearchParams();
 
-    // 미니 모드일 때 헤더 숨김 (채팅창 내부 로직 유지를 위해 남겨둠)
+    // 미니 모드일 때 헤더 숨김
     if (searchParams.get("mode") === "mini") {
         return null;
     }
@@ -31,7 +31,7 @@ export default function Header() {
             case 1: return "hamster";
             case 2: return "fox";
             case 3: return "panda";
-            default: return "cat"; // 캐릭터가 없거나 오류 시 고양이
+            default: return "cat"; // 기본값 고양이
         }
     };
 
@@ -41,9 +41,7 @@ export default function Header() {
             <header className="h-[72px] bg-white border-b border-slate-200 sticky top-0 z-50 bg-white/80 backdrop-blur-md">
                 <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
-                        {/* ✨ [추가됨] 로고 이미지 (로그인 전) */}
-                        <img src="/favicon.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
-
+                        {/* 🗑️ 파비콘 이미지 제거됨 */}
                         <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                             My <span className="text-primary-600">Buddy</span>
                         </h1>
@@ -65,7 +63,8 @@ export default function Header() {
     // --- 2) 로그인 후 헤더 (/app 내부) ---
 
     const myCharType = getCharacterType(user?.characterSeq);
-    const currentProfileImg = characterImages[myCharType] || characterImages.rabbit;
+    // ✨ [수정] rabbit은 목록에 없으므로 안전하게 cat이나 hamster로 변경
+    const currentProfileImg = characterImages[myCharType] || characterImages.cat;
 
     const handleLogout = () => {
         if (window.confirm("정말 로그아웃 하시겠어요?")) {
@@ -79,9 +78,7 @@ export default function Header() {
             <div className="mx-auto max-w-6xl px-6 h-full flex items-center justify-between">
 
                 <Link to="/app/home" className="flex items-center gap-2 group">
-                    {/* ✨ [추가됨] 로고 이미지 (로그인 후) */}
-                    <img src="/favicon.png" alt="logo" className="w-8 h-8 object-contain drop-shadow-sm" />
-
+                    {/* 🗑️ 파비콘 이미지 제거됨 */}
                     <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
                         My <span className="text-primary-600">Buddy</span>
                     </h1>
