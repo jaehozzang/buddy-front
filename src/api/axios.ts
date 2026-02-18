@@ -6,7 +6,7 @@ const BASE_URL = 'https://buddy-api.kro.kr';
 
 const commonConfig = {
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 };

@@ -62,8 +62,10 @@ export const diaryApi = {
     },
 
     // 2-2. AI 일기 생성 (대화 세션 기반)
-    // POST /api/v1/diary/from-chat
+    // POST /api/v1/diaries/from-chat (✨ 주석도 URL에 맞춰 수정했습니다)
     createDiaryFromChat: async (sessionId: number) => {
+        // ✨ URL 확인: /api/v1/diaries/from-chat (복수형)
+        // ✨ 데이터 확인: { sessionId } (사용자 확인 완료)
         const response = await authApi.post<AuthResponse<{
             title: string;
             content: string;
