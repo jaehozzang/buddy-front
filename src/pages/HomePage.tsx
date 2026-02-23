@@ -54,7 +54,7 @@ const HomePage = () => {
             const daysToFetch = activeDays.slice(0, 3);
 
             const promises = daysToFetch.map((dayItem: DailyDiaryCount) =>
-              diaryApi.getDiariesByDate(dayItem.date)
+              diaryApi.getDiariesByDate(dayItem.diaryDate)
             );
 
             const results = await Promise.all(promises);

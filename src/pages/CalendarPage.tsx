@@ -92,7 +92,7 @@ export default function CalendarPage() {
         const countMap: Record<string, number> = {};
         if (response.result && Array.isArray(response.result)) {
           response.result.forEach((item: DailyDiaryCount) => {
-            countMap[item.date] = item.count;
+            countMap[item.diaryDate] = item.count;
           });
         }
         setMonthlyCounts(countMap);

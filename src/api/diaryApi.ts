@@ -1,28 +1,38 @@
-import { authApi } from './axios';
 import type { AuthResponse } from '../types/auth';
-import type { DiarySummary, DiaryDetail } from '../types/diary';
+import type { DiaryDetail, DiarySummary } from '../types/diary';
+import { authApi } from './axios';
 
 // 📅 캘린더 잔디 심기용 타입
 export interface DailyDiaryCount {
-    date: string;  // "2026-02-04"
+    // ✨ 백엔드 응답 형식 변경 반영 (date -> diaryDate)
+    diaryDate: string;
     count: number; // 일기 개수
 }
 
 export const diaryApi = {
     // =================================================================
-    // 1. 조회 (Read) - 리스트, 캘린더, 상세
+    // 1. 조회 (Read) - 리스트, 검색, 캘린더, 상세
     // =================================================================
 
-    // 1-1. 날짜별 일기 목록 조회 (특정 하루)
-    // GET /api/v1/diaries?date=2024-02-12
-    getDiariesByDate: async (date: string) => {
+    // ✨ [NEW] 일기 목록 조회 및 검색 (피드, 리포트 화면용)
+    // GET /api/v1/diaries?search=&page=&size=&sort=
+    getDiaries: async (search: string = "", page: number = 0, size: number = 50, sort: string = "desc") => {
         const response = await authApi.get<AuthResponse<DiarySummary[]>>('/api/v1/diaries', {
+            params: { search, page, size, sort }
+        });
+        return response.data;
+    },
+
+    // ✨ [MODIFIED] 날짜별 일기 목록 조회 (특정 하루)
+    // GET /api/v1/diaries/date?date=2024-02-12
+    getDiariesByDate: async (date: string) => {
+        const response = await authApi.get<AuthResponse<DiarySummary[]>>('/api/v1/diaries/date', {
             params: { date },
         });
         return response.data;
     },
 
-    // 1-2. 월간 일기 목록 조회 (리스트용)
+    // 1-2. 월간 일기 목록 조회 (리스트용) 
     // GET /api/v1/diaries?date=2024-02-01&type=MONTHLY
     getMonthlyDiaries: async (year: number, month: number) => {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -62,10 +72,8 @@ export const diaryApi = {
     },
 
     // 2-2. AI 일기 생성 (대화 세션 기반)
-    // POST /api/v1/diaries/from-chat (✨ 주석도 URL에 맞춰 수정했습니다)
+    // POST /api/v1/diaries/from-chat
     createDiaryFromChat: async (sessionId: number) => {
-        // ✨ URL 확인: /api/v1/diaries/from-chat (복수형)
-        // ✨ 데이터 확인: { sessionId } (사용자 확인 완료)
         const response = await authApi.post<AuthResponse<{
             title: string;
             content: string;
