@@ -49,7 +49,7 @@ const HomePage = () => {
           if (countRes?.result && Array.isArray(countRes.result)) {
             const activeDays = countRes.result
               .filter((item: DailyDiaryCount) => item.count > 0)
-              .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              .sort((a: any, b: any) => new Date(b.diaryDate).getTime() - new Date(a.diaryDate).getTime());
 
             const daysToFetch = activeDays.slice(0, 3);
 
